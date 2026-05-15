@@ -1,0 +1,55 @@
+/* === Help Page Styles === */
+
+.botAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top center;
+  flex-shrink: 0;
+  border: 2px solid var(--primaryLight);
+}
+
+/* === Auth Pages === */
+.authLogo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.authLogo img {
+  border-radius: 50%;
+  box-shadow: var(--shadow);
+}
+
+.authTitle {
+  font-family: Montserrat;
+  font-weight: 800;
+  font-size: 24px;
+  color: var(--text);
+}
+
+/* === Mobile Menu === */
+.nav-link {
+  padding: 14px 16px;
+  border-radius: 14px;
+  color: #fff;
+  font-weight: 500;
+  opacity: 0.95;
+  transition: background 180ms ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: inherit;
+}
+
+.nav-link:hover {
+  background: rgba(255,255,255,0.12);
+}

@@ -1,0 +1,28 @@
+{
+  "name": "zavodych-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --import dotenv/config --env-file ../.env index.js",
+    "start": "node --import dotenv/config --env-file ../.env index.js",
+    "seed": "node --import dotenv/config --env-file ../.env db/seed.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "cross-env": "^10.1.0",
+    "dotenv": "^16.4.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.9",
+    "qrcode": "^1.5.3",
+    "sqlite3": "^5.1.7",
+    "winston": "^3.11.0"
+  }
+}
