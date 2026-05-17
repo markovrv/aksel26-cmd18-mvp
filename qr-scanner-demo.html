@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Scanner Demo</title>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+</head>
+<body>
+<h2>QR Сканер (демо)</h2>
+<video id="video" style="max-width: 100%; border: 1px solid #ccc;" playsinline muted></video>
+<canvas id="canvas" style="display: none;"></canvas>
+<div style="margin-top: 12px;">
+  <button id="startBtn">Запустить камеру</button>
+  <button id="stopBtn" disabled>Остановить</button>
+</div>
+<p id="status" style="margin-top: 8px; font-family: monospace;">Ожидание...</p>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const status = document.getElementById('status');
+
+let scanning = false;
+let stream = null;
+
+function startCamera() {
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(s => {
+      stream = s;
+      video.srcObject = s;
+      video.play();
+      scanning = true;
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      status.textContent = 'Сканирование... Результаты в консоли (F12)';
+      tick();
+    })
+    .catch(err => {
+      status.textContent = 'Ошибка доступа к камере: ' + err.message;
+    });
+}
+
+function stopCamera() {
+  scanning = false;
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
+  video.srcObject = null;
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  status.textContent = 'Камера остановлена';
+}
+
+function tick() {
+  if (!scanning) return;
+
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+    if (code && code.data) {
+      console.log('QR найден:', code);
+      status.textContent = 'Найден QR: ' + code.data;
+      // Не останавливаемся — продолжаем сканирование
+    }
+  }
+
+  requestAnimationFrame(tick);
+}
+
+startBtn.addEventListener('click', startCamera);
+stopBtn.addEventListener('click', stopCamera);
+</script>
+</body>
+</html>

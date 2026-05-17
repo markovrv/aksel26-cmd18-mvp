@@ -10,7 +10,8 @@ const CRED_PATH = join(__dirname, '..', 'ai-cred.json');
 const defaults = {
   AI_API_URL: 'https://api.openai.com/v1/chat/completions',
   AI_API_KEY: '',
-  AI_API_MODEL: 'gpt-3.5-turbo'
+  AI_API_MODEL: 'gpt-3.5-turbo',
+  AI_SYSTEM_PROMPT: ''
 };
 
 export function loadAiCreds() {

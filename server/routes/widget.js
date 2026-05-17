@@ -2,19 +2,23 @@
 import express from 'express';
 import { body } from 'express-validator';
 import { handleValidationErrors } from '../middleware/validate.js';
-import { authenticate } from '../middleware/auth.js';
+import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../utils/config.js';
 import * as widgetController from '../controllers/chatWidgetController.js';
 
 const router = express.Router();
 
-// Chat widget — authenticate опционально, если нет токена — req.user будет undefined
+// Chat widget — опциональная аутентификация без блокировки
 router.post(
   '/chat',
   (req, res, next) => {
-    // Пробуем аутентификацию, но не блокируем если нет токена
-    const token = req.cookies.token;
-    if (token) {
-      return authenticate(req, res, next);
+    try {
+      const token = req.cookies.token;
+      if (token) {
+        req.user = jwt.verify(token, getJwtSecret());
+      }
+    } catch {
+      // токен невалидный — просто игнорируем
     }
     next();
   },

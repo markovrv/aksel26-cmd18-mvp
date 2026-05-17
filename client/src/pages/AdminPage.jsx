@@ -37,8 +37,8 @@ export function AdminPage() {
   const [enterpriseUsers, setEnterpriseUsers] = useState([]);
 
   // AI credentials state
-  const [aiCreds, setAiCreds] = useState({ AI_API_URL: '', AI_API_KEY: '', AI_API_MODEL: '' });
-  const [aiCredsForm, setAiCredsForm] = useState({ AI_API_URL: '', AI_API_KEY: '', AI_API_MODEL: '' });
+  const [aiCreds, setAiCreds] = useState({ AI_API_URL: '', AI_API_KEY: '', AI_API_MODEL: '', AI_SYSTEM_PROMPT: '' });
+  const [aiCredsForm, setAiCredsForm] = useState({ AI_API_URL: '', AI_API_KEY: '', AI_API_MODEL: '', AI_SYSTEM_PROMPT: '' });
   const [aiCredsSaving, setAiCredsSaving] = useState(false);
 
   useEffect(() => {
@@ -58,7 +58,8 @@ export function AdminPage() {
       setAiCredsForm({
         AI_API_URL: data.AI_API_URL || '',
         AI_API_KEY: '',
-        AI_API_MODEL: data.AI_API_MODEL || ''
+        AI_API_MODEL: data.AI_API_MODEL || '',
+        AI_SYSTEM_PROMPT: data.AI_SYSTEM_PROMPT || ''
       });
     } catch (err) {
       console.error('Failed to load AI creds:', err);
@@ -520,7 +521,7 @@ export function AdminPage() {
                   />
                 </div>
 
-                <div style={{ marginBottom: 24 }}>
+                <div style={{ marginBottom: 16 }}>
                   <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Модель</label>
                   <input
                     className="input"
@@ -528,6 +529,20 @@ export function AdminPage() {
                     onChange={e => setAiCredsForm(prev => ({ ...prev, AI_API_MODEL: e.target.value }))}
                     placeholder="gpt-3.5-turbo"
                     style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>
+                    Системный промпт
+                    <span style={{ fontWeight: 400, color: '#888' }}> (инструкция для ассистента)</span>
+                  </label>
+                  <textarea
+                    className="input"
+                    value={aiCredsForm.AI_SYSTEM_PROMPT}
+                    onChange={e => setAiCredsForm(prev => ({ ...prev, AI_SYSTEM_PROMPT: e.target.value }))}
+                    rows={10}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14, fontFamily: 'monospace', resize: 'vertical' }}
                   />
                 </div>
 

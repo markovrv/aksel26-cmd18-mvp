@@ -95,7 +95,8 @@ export async function getAiCreds(req, res) {
     res.json({
       AI_API_URL: creds.AI_API_URL,
       AI_API_KEY: maskedKey,
-      AI_API_MODEL: creds.AI_API_MODEL
+      AI_API_MODEL: creds.AI_API_MODEL,
+      AI_SYSTEM_PROMPT: creds.AI_SYSTEM_PROMPT
     });
   } catch (err) {
     console.error('GetAiCreds error:', err);
@@ -106,13 +107,14 @@ export async function getAiCreds(req, res) {
 // === Update AI Credentials ===
 export async function updateAiCreds(req, res) {
   try {
-    const { AI_API_URL, AI_API_KEY, AI_API_MODEL } = req.body;
+    const { AI_API_URL, AI_API_KEY, AI_API_MODEL, AI_SYSTEM_PROMPT } = req.body;
     const current = loadAiCreds();
 
     const updated = {
       AI_API_URL: AI_API_URL || current.AI_API_URL,
       AI_API_KEY: AI_API_KEY !== undefined && AI_API_KEY.trim() !== '' ? AI_API_KEY : current.AI_API_KEY,
-      AI_API_MODEL: AI_API_MODEL || current.AI_API_MODEL
+      AI_API_MODEL: AI_API_MODEL || current.AI_API_MODEL,
+      AI_SYSTEM_PROMPT: AI_SYSTEM_PROMPT !== undefined ? AI_SYSTEM_PROMPT : current.AI_SYSTEM_PROMPT
     };
 
     saveAiCreds(updated);
