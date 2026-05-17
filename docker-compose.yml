@@ -14,7 +14,4 @@ services:
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USER=${SMTP_USER:-your_user}
       - SMTP_PASS=${SMTP_PASS:-your_pass}
-      - AI_API_KEY=${AI_API_KEY:-}
-      - AI_API_URL=${AI_API_URL:-https://ai.api.cloud.yandex.net/v1/chat/completions}
-      - AI_API_MODEL=${AI_API_MODEL:-gpt://b1g7q3l95b534eaueb63/yandexgpt-lite/latest}
     restart: unless-stopped

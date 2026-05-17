@@ -1,6 +1,6 @@
 // === Admin Page ===
 import React, { useState, useEffect } from 'react';
-import { Users, Building2, Briefcase, Calendar, Shield, Plus, Edit3, Trash2, X } from 'lucide-react';
+import { Users, Building2, Briefcase, Calendar, Shield, Plus, Edit3, Trash2, X, Bot } from 'lucide-react';
 import { api } from '../api/client';
 import YandexMapSelector from '../components/YandexMapSelector';
 import { useToastStore } from '../store/useToastStore';
@@ -10,6 +10,7 @@ const TABS = [
   { key: 'users', label: 'Пользователи', icon: Users },
   { key: 'professions', label: 'Профессии', icon: Briefcase },
   { key: 'enterprises', label: 'Предприятия', icon: Building2 },
+  { key: 'ai', label: 'AI Ассистент', icon: Bot },
 ];
 
 export function AdminPage() {
@@ -35,9 +36,48 @@ export function AdminPage() {
   });
   const [enterpriseUsers, setEnterpriseUsers] = useState([]);
 
+  // AI credentials state
+  const [aiCreds, setAiCreds] = useState({ AI_API_URL: '', AI_API_KEY: '', AI_API_MODEL: '' });
+  const [aiCredsForm, setAiCredsForm] = useState({ AI_API_URL: '', AI_API_KEY: '', AI_API_MODEL: '' });
+  const [aiCredsSaving, setAiCredsSaving] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'ai') {
+      loadAiCreds();
+    }
+  }, [activeTab]);
+
+  const loadAiCreds = async () => {
+    try {
+      const data = await api.get('/admin/ai-creds');
+      setAiCreds(data);
+      setAiCredsForm({
+        AI_API_URL: data.AI_API_URL || '',
+        AI_API_KEY: '',
+        AI_API_MODEL: data.AI_API_MODEL || ''
+      });
+    } catch (err) {
+      console.error('Failed to load AI creds:', err);
+    }
+  };
+
+  const handleAiCredsSave = async (e) => {
+    e.preventDefault();
+    setAiCredsSaving(true);
+    try {
+      await api.put('/admin/ai-creds', aiCredsForm);
+      success('Настройки AI сохранены');
+      loadAiCreds();
+    } catch (err) {
+      error(err.message || 'Ошибка при сохранении настроек AI');
+    } finally {
+      setAiCredsSaving(false);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -89,6 +129,35 @@ export function AdminPage() {
 
   const handleProfSubmit = async (e) => {
     e.preventDefault();
+
+    // Валидация Видео ВК
+    if (profForm.video_url) {
+      const videoUrl = profForm.video_url.trim();
+      if (!videoUrl.startsWith('https://vkvideo.ru/video_ext.php?')) {
+        error('Видео ВК: ссылка должна начинаться с https://vkvideo.ru/video_ext.php?');
+        return;
+      }
+    }
+
+    // Валидация Ссылок на изображения (формат: "ключ":"url","ключ":"url")
+    if (profForm.image_url) {
+      const imagesStr = profForm.image_url.trim();
+      // Проверяем, что строка похожа на валидное JSON-представление объекта
+      try {
+        const parsed = JSON.parse(`{${imagesStr}}`);
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+          throw new Error('Неверный формат');
+        }
+        for (const [key, val] of Object.entries(parsed)) {
+          if (typeof key !== 'string' || !key) throw new Error('Название не может быть пустым');
+          if (typeof val !== 'string' || !val.startsWith('http')) throw new Error(`Значение для "${key}" должно быть URL, начинающимся с http`);
+        }
+      } catch (validationErr) {
+        error(`Ссылки на изображения: неверный формат. Ожидается "название":"url","название":"url". Ошибка: ${validationErr.message}`);
+        return;
+      }
+    }
+
     try {
       if (editingProf) {
         await api.put(`/professions/${editingProf.id}`, profForm);
@@ -405,6 +474,71 @@ export function AdminPage() {
               )}
             </div>
           )}
+
+          {/* === Tab: AI === */}
+          {activeTab === 'ai' && (
+            <div className="section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h2 style={{ margin: 0 }}>Настройки AI ассистента</h2>
+              </div>
+
+              <div style={{ marginBottom: 20, padding: 16, background: 'var(--surface2)', borderRadius: 14 }}>
+                <h4 style={{ marginBottom: 8 }}>Текущие настройки</h4>
+                <p style={{ fontSize: 14, margin: '4px 0' }}>
+                  <strong>URL:</strong> {aiCreds.AI_API_URL}
+                </p>
+                <p style={{ fontSize: 14, margin: '4px 0' }}>
+                  <strong>Модель:</strong> {aiCreds.AI_API_MODEL}
+                </p>
+                <p style={{ fontSize: 14, margin: '4px 0' }}>
+                  <strong>Ключ:</strong> {aiCreds.AI_API_KEY || 'не указан'}
+                </p>
+              </div>
+
+              <form onSubmit={handleAiCredsSave}>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>API URL</label>
+                  <input
+                    className="input"
+                    value={aiCredsForm.AI_API_URL}
+                    onChange={e => setAiCredsForm(prev => ({ ...prev, AI_API_URL: e.target.value }))}
+                    placeholder="https://api.openai.com/v1/chat/completions"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>
+                    API Ключ {aiCreds.AI_API_KEY ? '(оставьте пустым, чтобы не менять)' : ''}
+                  </label>
+                  <input
+                    className="input"
+                    value={aiCredsForm.AI_API_KEY}
+                    onChange={e => setAiCredsForm(prev => ({ ...prev, AI_API_KEY: e.target.value }))}
+                    placeholder="sk-..."
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 24 }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Модель</label>
+                  <input
+                    className="input"
+                    value={aiCredsForm.AI_API_MODEL}
+                    onChange={e => setAiCredsForm(prev => ({ ...prev, AI_API_MODEL: e.target.value }))}
+                    placeholder="gpt-3.5-turbo"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                  <button type="submit" className="btn primary" disabled={aiCredsSaving}>
+                    {aiCredsSaving ? 'Сохранение...' : 'Сохранить настройки'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </>
       )}
 
@@ -473,24 +607,31 @@ export function AdminPage() {
               </div>
 
               <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Ссылка на видео</label>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Видео ВК</label>
                 <input
                   className="input"
                   value={profForm.video_url}
-                  onChange={e => setProfForm(prev => ({ ...prev, video_url: e.target.value }))}
-                  placeholder="https://..."
+                  onChange={e => {
+                    const raw = e.target.value;
+                    // Если вставлен iframe — извлекаем src
+                    const match = raw.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+                    const value = match ? match[1] : raw;
+                    setProfForm(prev => ({ ...prev, video_url: value }));
+                  }}
+                  placeholder="https://vkvideo.ru/video_ext.php?oid=..."
                   style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
                 />
               </div>
 
               <div style={{ marginBottom: 24 }}>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Ссылка на изображение</label>
-                <input
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Ссылки на изображения</label>
+                <textarea
                   className="input"
                   value={profForm.image_url}
                   onChange={e => setProfForm(prev => ({ ...prev, image_url: e.target.value }))}
-                  placeholder="https://..."
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
+                  rows={3}
+                  placeholder='"название":"url","название":"url"'
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14, resize: 'vertical' }}
                 />
               </div>
 

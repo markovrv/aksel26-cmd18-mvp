@@ -28,4 +28,10 @@ router.get('/stats', authenticate, requireRole('admin'), adminController.getStat
 // Get enterprise users available for assignment
 router.get('/enterprise-users-available', authenticate, requireRole('admin'), adminController.getAvailableEnterpriseUsers);
 
+// Get AI credentials
+router.get('/ai-creds', authenticate, requireRole('admin'), adminController.getAiCreds);
+
+// Update AI credentials
+router.put('/ai-creds', authenticate, requireRole('admin'), adminController.updateAiCreds);
+
 export default router;

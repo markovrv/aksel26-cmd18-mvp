@@ -96,7 +96,18 @@ export function EnterpriseDetailPage() {
 
       <div className="section" style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'start', gap: 20 }}>
-          <div>
+          {enterprise.photo_url && (
+            <div
+              style={{
+                width: 200,
+                height: 160,
+                borderRadius: 14,
+                background: `url(${enterprise.photo_url}) center / cover no-repeat`,
+                flexShrink: 0
+              }}
+            />
+          )}
+          <div style={{ flex: 1 }}>
             <span className="badge" style={{ marginBottom: 12 }}>{enterprise.industry}</span>
             <h1>{enterprise.name}</h1>
             <p className="meta" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

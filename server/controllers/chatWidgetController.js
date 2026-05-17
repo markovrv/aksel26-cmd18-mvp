@@ -1,10 +1,10 @@
-// === AI Chat Controller ===
+// === Chat Widget Controller (no auth required) ===
 import db from '../db/index.js';
 import fetch from 'node-fetch';
 import { loadAiCreds } from '../utils/aiCreds.js';
 
-// === Chat ===
-export async function chat(req, res) {
+// === Widget Chat (без обязательной авторизации) ===
+export async function widgetChat(req, res) {
   try {
     const { message } = req.body;
     const user_id = req.user?.id;
@@ -14,53 +14,51 @@ export async function chat(req, res) {
       return res.status(400).json({ message: 'Сообщение обязательно' });
     }
 
-    // Save user message
+    // Save user message if authenticated
     if (user_id) await db.runAsync(
       'INSERT INTO ai_chat_history (user_id, role, content) VALUES (?, ?, ?)',
       [user_id, 'user', message]
     );
     else history = [{role: 'user', content: message}];
 
-    // Get chat history
+    // Get chat history if authenticated
     if (user_id) history = await db.allAsync(
       'SELECT role, content FROM ai_chat_history WHERE user_id = ? ORDER BY created_at ASC LIMIT(20)',
       [user_id]
     );
 
-    // Load AI credentials on each request (so admin changes take effect immediately)
     const aiCreds = loadAiCreds();
     const AI_API_URL = aiCreds.AI_API_URL;
     const AI_API_KEY = aiCreds.AI_API_KEY;
     const AI_API_MODEL = aiCreds.AI_API_MODEL;
 
-    // Build messages for AI
     const systemPrompt = {
       role: 'system',
-      content: `Ты — Заводыч, дружелюбный помощник по профориентации для школьников и студентов Кировской области.  
+      content: `Ты — Заводыч, дружелюбный помощник по профориентации для школьников и студентов Кировской области.
 Твоя задача — помогать пользователям портала zavodych.ru.
 
 ## Доступные разделы сайта (абсолютные пути)
 - Главная: '/' — общая информация, шаги, подборка предприятий.
-- Профессии: '/professions' — список профессий с поиском и фильтрами.  
+- Профессии: '/professions' — список профессий с поиском и фильтрами.
   При выборе профессии показываются предприятия, где она востребована.
-- Предприятия: '/enterprises' — карточки всех предприятий.  
+- Предприятия: '/enterprises' — карточки всех предприятий.
   На странице конкретного предприятия, например '/enterprises/1', можно увидеть доступные слоты для экскурсий и записаться.
 - Карта предприятий: '/map' — все предприятия на Яндекс.Карте с адресами.
 - Мои записи: '/bookings' — список записей на экскурсии, их статусы, возможность отмены.
 - Сканирование QR-кода: '/qr' — для отметки посещения предприятия (требуется доступ к камере).
 - Помощь (чат с Заводычем): '/help' — здесь ты сейчас и находишься.
 - Личный кабинет: '/profile' — просмотр и редактирование профиля, список посещённых предприятий.
-- Вход: '/login'  
+- Вход: '/login'
 - Регистрация: '/register'
 
 ## Как давать ссылки
 - Если пользователь хочет выбрать профессию → направь на '/professions', предложи использовать фильтры.
 - Если хочет узнать о предприятиях → предложи '/enterprises' или '/map'.
-- Чтобы записаться на экскурсию → объясни алгоритм:  
+- Чтобы записаться на экскурсию → объясни алгоритм:
   «Найди предприятие через '/enterprises' или карту '/map', зайди на его страницу (например, '/enterprises/5'), выбери свободный слот и нажми “Записаться”. Потом все записи будут на '/bookings».»
 - Про QR-код → объясни: «Открой раздел '/bookings', выведи на экран QR-код нужного бронирования и покажи сотруднику предприятия — посещение зафиксируется автоматически.»
 - Если спрашивают про управление слотами или администрирование → уточни, что это доступно только сотрудникам предприятий ('/enterprise/panel') и администраторам ('/admin').
-- Для неавторизованных пользователей добавь: «Для записи на экскурсию и сканирования QR нужно войти – '/login', или зарегистрироваться – '/register».  
+- Для неавторизованных пользователей добавь: «Для записи на экскурсию и сканирования QR нужно войти – '/login', или зарегистрироваться – '/register».
 
 ## Стиль общения
 - Отвечай кратко, по делу, дружелюбно, используй «ты».
@@ -99,7 +97,6 @@ export async function chat(req, res) {
         const aiData = await aiResponse.json();
         const assistantMessage = aiData.choices?.[0]?.message?.content || 'Извините, я не смог обработать ваш запрос.';
 
-        // Save assistant response
         if (user_id) await db.runAsync(
           'INSERT INTO ai_chat_history (user_id, role, content) VALUES (?, ?, ?)',
           [user_id, 'assistant', assistantMessage]
@@ -109,7 +106,7 @@ export async function chat(req, res) {
       }
     }
 
-    // Fallback response without AI
+    // Fallback
     const fallbackResponses = [
       'Я пока учусь понимать ваши вопросы. Попробуйте спросить о профессиях или предприятиях Кировской области!',
       'Интересный вопрос! Пока я изучаю возможности портала. Могу помочь с выбором профессии или записью на экскурсию.',
@@ -125,18 +122,7 @@ export async function chat(req, res) {
 
     res.json({ message: fallback });
   } catch (err) {
-    console.error('Chat error:', err);
+    console.error('WidgetChat error:', err);
     res.status(500).json({ message: 'Ошибка при обработке сообщения' });
-  }
-}
-
-// === Clear Chat History ===
-export async function clearHistory(req, res) {
-  try {
-    await db.runAsync('DELETE FROM ai_chat_history WHERE user_id = ?', [req.user.id]);
-    res.json({ message: 'История чата очищена' });
-  } catch (err) {
-    console.error('ClearHistory error:', err);
-    res.status(500).json({ message: 'Ошибка при очистке истории' });
   }
 }

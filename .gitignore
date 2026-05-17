@@ -10,8 +10,12 @@ build/
 client/dist/
 
 # === Environment ===
+.env
 .env.local
 .env.*.local
+
+# === AI Credentials ===
+ai-cred.json
 
 # === Database ===
 *.db
@@ -46,3 +50,5 @@ uploads/*
 *.pid
 *.seed
 *.pid.lock
+
+package-lock.json

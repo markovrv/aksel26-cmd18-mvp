@@ -24,13 +24,16 @@ import qrRoutes from './routes/qr.js';
 import profileRoutes from './routes/profile.js';
 import adminRoutes from './routes/admin.js';
 import aiRoutes from './routes/ai.js';
+import widgetRoutes from './routes/widget.js';
 
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3001;
 
 // === Middleware ===
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,  // CSP отключён полностью
+}));
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true
@@ -70,6 +73,7 @@ app.use('/api/qr', qrRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/widget', widgetRoutes);
 
 // === SPA Fallback: serve index.html for non-API routes ===
 app.get('*', (req, res) => {

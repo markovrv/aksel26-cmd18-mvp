@@ -1,7 +1,7 @@
 // === Map Selector Component (Yandex Maps) ===
 import React, { useLayoutEffect, useRef, useState } from 'react';
 
-const SCRIPT_SRC = 'https://api-maps.yandex.ru/2.1/?apikey=YOUR_API_KEY&lang=ru_RU';
+const SCRIPT_SRC = 'https://api-maps.yandex.ru/2.1/?apikey=6c100799-f17e-42d6-b637-af2bc111cd32&lang=ru_RU';
 
 export default function YandexMapSelector({ latitude, longitude, onCoordsChange }) {
   const mapContainer = useRef(null);

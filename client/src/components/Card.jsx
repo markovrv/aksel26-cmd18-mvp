@@ -4,9 +4,14 @@ import { Link } from 'react-router-dom';
 import { MapPin, Clock } from 'lucide-react';
 
 export function EnterpriseCard({ enterprise, showVisited = false, isVisited = false }) {
+  const imageUrl = enterprise.photo_url || null;
+
   return (
     <div className="card">
-      <div className="card-img">
+      <div
+        className="card-img"
+        style={imageUrl ? { backgroundImage: `url(${imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+      >
         {enterprise.slot_count > 0 && (
           <span className="badge">Есть экскурсии</span>
         )}
@@ -39,9 +44,29 @@ export function EnterpriseCard({ enterprise, showVisited = false, isVisited = fa
 }
 
 export function ProfessionCard({ profession }) {
+  // Извлекаем первое изображение из image_url (формат: "название":"url","название":"url")
+  const firstImage = React.useMemo(() => {
+    if (!profession?.image_url) return null;
+    try {
+      const parsed = JSON.parse(`{${profession.image_url}}`);
+      const entries = Object.entries(parsed);
+      return entries.length > 0 ? entries[0][1] : null;
+    } catch {
+      return null;
+    }
+  }, [profession?.image_url]);
+
   return (
     <div className="card">
-      <div className="card-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        className="card-img"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: firstImage ? `url(${firstImage}) center / cover no-repeat` : undefined
+        }}
+      >
         <span className="badge">{profession.industry}</span>
       </div>
       <div className="card-body">

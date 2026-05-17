@@ -1,5 +1,6 @@
 // === Admin Controller ===
 import db from '../db/index.js';
+import { loadAiCreds, saveAiCreds } from '../utils/aiCreds.js';
 
 // === Get Users ===
 export async function getUsers(req, res) {
@@ -80,5 +81,44 @@ export async function getAvailableEnterpriseUsers(req, res) {
   } catch (err) {
     console.error('GetAvailableEnterpriseUsers error:', err);
     res.status(500).json({ message: 'Ошибка при получении списка пользователей' });
+  }
+}
+
+// === Get AI Credentials ===
+export async function getAiCreds(req, res) {
+  try {
+    const creds = loadAiCreds();
+    // Не возвращаем ключ в открытом виде, только маскированный
+    const maskedKey = creds.AI_API_KEY
+      ? creds.AI_API_KEY.slice(0, 4) + '…' + creds.AI_API_KEY.slice(-4)
+      : '';
+    res.json({
+      AI_API_URL: creds.AI_API_URL,
+      AI_API_KEY: maskedKey,
+      AI_API_MODEL: creds.AI_API_MODEL
+    });
+  } catch (err) {
+    console.error('GetAiCreds error:', err);
+    res.status(500).json({ message: 'Ошибка при получении настроек AI' });
+  }
+}
+
+// === Update AI Credentials ===
+export async function updateAiCreds(req, res) {
+  try {
+    const { AI_API_URL, AI_API_KEY, AI_API_MODEL } = req.body;
+    const current = loadAiCreds();
+
+    const updated = {
+      AI_API_URL: AI_API_URL || current.AI_API_URL,
+      AI_API_KEY: AI_API_KEY !== undefined && AI_API_KEY.trim() !== '' ? AI_API_KEY : current.AI_API_KEY,
+      AI_API_MODEL: AI_API_MODEL || current.AI_API_MODEL
+    };
+
+    saveAiCreds(updated);
+    res.json({ message: 'Настройки AI сохранены' });
+  } catch (err) {
+    console.error('UpdateAiCreds error:', err);
+    res.status(500).json({ message: 'Ошибка при сохранении настроек AI' });
   }
 }

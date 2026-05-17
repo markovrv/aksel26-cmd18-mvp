@@ -30,7 +30,7 @@ export function MapPage() {
       initMap();
     } else if (!loading && enterprises.length > 0) {
       const script = document.createElement('script');
-      script.src = 'https://api-maps.yandex.ru/2.1/?apikey=YOUR_API_KEY&lang=ru_RU';
+      script.src = 'https://api-maps.yandex.ru/2.1/?apikey=6c100799-f17e-42d6-b637-af2bc111cd32&lang=ru_RU';
       script.onload = () => {
         window.ymaps.ready(initMap);
       };

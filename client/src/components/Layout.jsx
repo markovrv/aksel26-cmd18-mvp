@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { useAuthStore } from '../store/useAuthStore';
 import { Menu, LogIn, X } from 'lucide-react';
+import { ChatWidget } from './ChatWidget';
 
 export function Layout({ children }) {
   const { user } = useAuthStore();
@@ -47,6 +48,7 @@ export function Layout({ children }) {
         </div>
         {children}
       </main>
+      <ChatWidget />
     </div>
   );
 }

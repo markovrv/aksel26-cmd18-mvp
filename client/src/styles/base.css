@@ -32,6 +32,8 @@ html, body {
   font-family: Inter, system-ui, sans-serif;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 a {
@@ -91,6 +93,8 @@ h4 { font-size: 18px; margin-bottom: 8px; }
 .main {
   padding: 24px 28px;
   max-width: 1400px;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 @media (max-width: 1100px) {

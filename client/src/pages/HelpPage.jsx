@@ -77,7 +77,14 @@ export function HelpPage() {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, height: 'calc(100vh - 100px)' }}>
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: '1fr 320px',
+      gap: 24,
+      height: 'calc(100vh - 100px)',
+    }}
+    className="help-layout"
+    >
       {/* Chat Area */}
       <div className="section" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -151,7 +158,7 @@ export function HelpPage() {
       </div>
 
       {/* Sidebar Help */}
-      <div>
+      <div className="help-sidebar">
         <div className="section">
           <h3>Что я умею</h3>
           <ul style={{ paddingLeft: 20, color: 'var(--muted)', lineHeight: 1.8 }}>
@@ -181,3 +188,25 @@ export function HelpPage() {
     </div>
   );
 }
+
+// Мобильные стили для страницы помощи
+const style = document.createElement('style');
+style.textContent = `
+  @media (max-width: 900px) {
+    .help-layout {
+      grid-template-columns: 1fr !important;
+      height: auto !important;
+      min-height: calc(100vh - 100px);
+    }
+    .help-layout > div:first-child {
+      min-height: 50vh;
+    }
+    .help-sidebar {
+      order: 2;
+    }
+    .help-sidebar .section:first-child {
+      margin-top: 0;
+    }
+  }
+`;
+if (document.head) document.head.appendChild(style);
