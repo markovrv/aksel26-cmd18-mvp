@@ -4,6 +4,7 @@ import { body } from 'express-validator';
 import { handleValidationErrors } from '../middleware/validate.js';
 import { authenticate, requireNotBlocked } from '../middleware/auth.js';
 import * as profileController from '../controllers/profileController.js';
+import * as vacanciesController from '../controllers/vacanciesController.js';
 
 const router = express.Router();
 
@@ -27,5 +28,11 @@ router.put(
 
 // Get visited enterprises
 router.get('/visited', authenticate, requireNotBlocked, profileController.getVisitedEnterprises);
+
+// Get my applications
+router.get('/applications', authenticate, requireNotBlocked, profileController.getApplications);
+
+// Cancel my application
+router.delete('/applications/:applicationId', authenticate, requireNotBlocked, vacanciesController.cancelApplication);
 
 export default router;

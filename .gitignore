@@ -16,6 +16,7 @@ client/dist/
 
 # === AI Credentials ===
 ai-cred.json
+vk-cred.json
 
 # === Database ===
 *.db

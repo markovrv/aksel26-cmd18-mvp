@@ -1,7 +1,7 @@
 // === Enterprise Detail Page ===
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone, Globe, Calendar, Users } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Globe, Calendar, Users, Briefcase } from 'lucide-react';
 import { api } from '../api/client';
 import { useToastStore } from '../store/useToastStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -11,8 +11,10 @@ export function EnterpriseDetailPage() {
   const [enterprise, setEnterprise] = useState(null);
   const [professions, setProfessions] = useState([]);
   const [slots, setSlots] = useState([]);
+  const [vacancies, setVacancies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bookingInProgress, setBookingInProgress] = useState(null);
+  const [applyInProgress, setApplyInProgress] = useState(null);
 
   const { success, error } = useToastStore();
   const { user } = useAuthStore();
@@ -26,7 +28,7 @@ export function EnterpriseDetailPage() {
       const data = await api.get(`/enterprises/${id}`);
       setEnterprise(data.enterprise);
       setProfessions(data.professions || []);
-      setSlots(data.slotsCount > 0 ? [] : []); // We don't load all slots on detail page
+      setSlots(data.slotsCount > 0 ? [] : []);
     } catch (err) {
       console.error('Failed to load enterprise:', err);
     } finally {
@@ -43,13 +45,28 @@ export function EnterpriseDetailPage() {
     }
   };
 
+  const loadVacancies = async () => {
+    try {
+      const data = await api.get(`/enterprises/${id}/vacancies`);
+      setVacancies(data.data);
+    } catch (err) {
+      console.error('Failed to load vacancies:', err);
+    }
+  };
+
   const [userBookings, setUserBookings] = useState([]);
 
   useEffect(() => {
     if (user) {
       loadMyBookings();
+      loadVacancies();
     }
   }, [user]);
+
+  useEffect(() => {
+    // Load vacancies even if not logged in
+    loadVacancies();
+  }, [id]);
 
   const loadMyBookings = async () => {
     try {
@@ -76,6 +93,27 @@ export function EnterpriseDetailPage() {
       error(err.message || 'Ошибка при записи');
     } finally {
       setBookingInProgress(null);
+    }
+  };
+
+  const handleApply = async (vacancyId, professionTitle) => {
+    if (!user) {
+      error('Для отклика необходимо авторизоваться');
+      return;
+    }
+
+    setApplyInProgress(vacancyId);
+    try {
+      await api.post(`/vacancies/${vacancyId}/apply`);
+      success(`Отклик на вакансию "${professionTitle}" отправлен!`);
+    } catch (err) {
+      if (err.status === 409) {
+        error('Вы уже откликались на эту вакансию');
+      } else {
+        error(err.message || 'Ошибка при отклике');
+      }
+    } finally {
+      setApplyInProgress(null);
     }
   };
 
@@ -147,6 +185,50 @@ export function EnterpriseDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Vacancies */}
+      <div className="section" style={{ marginBottom: 24 }}>
+        <h2>
+          <Briefcase size={20} style={{ verticalAlign: 'middle', marginRight: 8 }} />
+          Вакантные места для молодых специалистов
+        </h2>
+        {vacancies.length === 0 ? (
+          <div className="empty-state">
+            <p>На данный момент открытых вакансий нет</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 12, marginTop: 16 }}>
+            {vacancies.map(v => (
+              <div
+                key={v.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 16,
+                  background: 'var(--surface2)',
+                  borderRadius: 14,
+                  gap: 16
+                }}
+              >
+                <div>
+                  <strong>{v.profession_title}</strong>
+                  <span style={{ color: 'var(--muted)', marginLeft: 12, fontSize: 13 }}>
+                    {v.available_slots} {v.available_slots === 1 ? 'вакантное место' : 'вакантных мест'}
+                  </span>
+                </div>
+                <button
+                  className="btn primary"
+                  onClick={() => handleApply(v.id, v.profession_title)}
+                  disabled={applyInProgress === v.id}
+                >
+                  {applyInProgress === v.id ? 'Отправка...' : 'Откликнуться'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Slots */}
       <div className="section">

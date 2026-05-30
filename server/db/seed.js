@@ -1,14 +1,39 @@
 // === Seed Database ===
 import db from './index.js';
 import bcrypt from 'bcrypt';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const saltRounds = 12;
+
+function runSchema() {
+  return new Promise((resolve, reject) => {
+    const schemaPath = path.resolve(__dirname, 'schema.sql');
+    if (fs.existsSync(schemaPath)) {
+      const schema = fs.readFileSync(schemaPath, 'utf-8');
+      db.exec(schema, (err) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    } else {
+      resolve();
+    }
+  });
+}
 
 async function seed() {
   console.log('Seeding database...');
 
   try {
+    // Убедимся, что схема создана
+    await runSchema();
     // === Clear existing data ===
+    await db.runAsync('DELETE FROM vacancy_applications');
+    await db.runAsync('DELETE FROM vacancies');
+    await db.runAsync('DELETE FROM profession_educational_institutions');
+    await db.runAsync('DELETE FROM educational_institutions');
     await db.runAsync('DELETE FROM qr_codes');
     await db.runAsync('DELETE FROM bookings');
     await db.runAsync('DELETE FROM slots');
@@ -225,6 +250,66 @@ async function seed() {
       );
     }
     console.log('Slots created:', slots.length);
+
+    // === Create Educational Institutions ===
+    const institutions = [
+      { name: 'Вятский государственный университет', type: 'вуз', website: 'https://vyatsu.ru' },
+      { name: 'Кировский технологический колледж', type: 'колледж', website: 'https://ktk-kirov.ru' },
+      { name: 'Кировский авиационный техникум', type: 'техникум', website: 'https://kavt-kirov.ru' }
+    ];
+
+    const institutionIds = [];
+    for (const inst of institutions) {
+      const result = await db.runAsync(
+        'INSERT INTO educational_institutions (name, type, website) VALUES (?, ?, ?)',
+        [inst.name, inst.type, inst.website]
+      );
+      institutionIds.push(result.lastID);
+    }
+    console.log('Educational institutions created:', institutionIds.length);
+
+    // Link some professions to institutions
+    // Инженер-технолог (1) -> ВятГУ, КАВТ
+    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [1, institutionIds[0]]);
+    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [1, institutionIds[2]]);
+    // Программист АСУ ТП (7) -> ВятГУ, КТК
+    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [7, institutionIds[0]]);
+    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [7, institutionIds[1]]);
+    // Лаборант (5) -> ВятГУ
+    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [5, institutionIds[0]]);
+    // Биотехнолог (6) -> ВятГУ
+    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [6, institutionIds[0]]);
+    // Электромонтажник (4) -> КАВТ
+    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [4, institutionIds[2]]);
+    // Сварщик (3) -> КТК
+    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [3, institutionIds[1]]);
+    console.log('Profession-institution links created');
+
+    // === Create Vacancies ===
+    // Лаванда: лаборант (5) - 2 места, биотехнолог (6) - 1 место
+    await db.runAsync(
+      'INSERT INTO vacancies (enterprise_id, profession_id, available_slots) VALUES (?, ?, ?)',
+      [enterpriseIds[0], 5, 2]
+    );
+    await db.runAsync(
+      'INSERT INTO vacancies (enterprise_id, profession_id, available_slots) VALUES (?, ?, ?)',
+      [enterpriseIds[0], 6, 1]
+    );
+    // ЛеПласт: инженер-технолог (1) - 3 места, оператор ЧПУ (2) - 5 мест
+    await db.runAsync(
+      'INSERT INTO vacancies (enterprise_id, profession_id, available_slots) VALUES (?, ?, ?)',
+      [enterpriseIds[1], 1, 3]
+    );
+    await db.runAsync(
+      'INSERT INTO vacancies (enterprise_id, profession_id, available_slots) VALUES (?, ?, ?)',
+      [enterpriseIds[1], 2, 5]
+    );
+    // КЭМЗ: сварщик (3) - 2 места
+    await db.runAsync(
+      'INSERT INTO vacancies (enterprise_id, profession_id, available_slots) VALUES (?, ?, ?)',
+      [enterpriseIds[2], 3, 2]
+    );
+    console.log('Vacancies created');
 
     console.log('Database seeded successfully!');
     process.exit(0);

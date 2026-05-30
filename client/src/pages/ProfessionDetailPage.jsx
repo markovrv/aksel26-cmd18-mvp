@@ -1,7 +1,7 @@
 // === Profession Detail Page ===
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, X } from 'lucide-react';
+import { ArrowLeft, X, GraduationCap, ExternalLink } from 'lucide-react';
 import { api } from '../api/client';
 import { EnterpriseCard } from '../components/Card';
 
@@ -78,14 +78,18 @@ export function ProfessionDetailPage() {
     return () => el.removeEventListener('wheel', handler);
   }, [images.length, profession?.video_url]);
 
+  const [institutions, setInstitutions] = useState([]);
+
   const loadData = async () => {
     try {
-      const [profData, entData] = await Promise.all([
+      const [profData, entData, instData] = await Promise.all([
         api.get(`/professions/${id}`),
-        api.get(`/professions/${id}/enterprises`)
+        api.get(`/professions/${id}/enterprises`),
+        api.get(`/professions/${id}/educational-institutions`)
       ]);
       setProfession(profData.profession);
       setEnterprises(entData.data);
+      setInstitutions(instData.data);
     } catch (err) {
       console.error('Failed to load profession:', err);
     } finally {
@@ -341,6 +345,59 @@ export function ProfessionDetailPage() {
               <EnterpriseCard key={ent.id} enterprise={ent} />
             ))}
           </div>
+        )}
+      </div>
+
+      {/* Educational Institutions */}
+      <div className="section" style={{ marginTop: 24 }}>
+        <h2>
+          <GraduationCap size={22} style={{ verticalAlign: 'middle', marginRight: 8 }} />
+          Обучение на специальность в Кировской области
+        </h2>
+        {institutions.length === 0 ? (
+          <div className="empty-state">
+            <p className="empty-hint">Нет данных об учебных заведениях</p>
+          </div>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0, margin: '16px 0 0', display: 'grid', gap: 12 }}>
+            {institutions.map(inst => (
+              <li
+                key={inst.id}
+                style={{
+                  padding: 16,
+                  background: 'var(--surface2)',
+                  borderRadius: 14,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12
+                }}
+              >
+                {inst.website ? (
+                  <a
+                    href={inst.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      fontWeight: 600,
+                      color: 'var(--primary)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      textDecoration: 'none'
+                    }}
+                  >
+                    {inst.name}
+                    <ExternalLink size={14} />
+                  </a>
+                ) : (
+                  <span style={{ fontWeight: 600 }}>{inst.name}</span>
+                )}
+                <span className="chip" style={{ fontSize: 12, marginLeft: 'auto' }}>
+                  {inst.type}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 

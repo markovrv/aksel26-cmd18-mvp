@@ -127,3 +127,24 @@ export async function deleteProfession(req, res) {
     res.status(500).json({ message: 'Ошибка при удалении профессии' });
   }
 }
+
+// === Get Educational Institutions by Profession ===
+export async function getEducationalInstitutions(req, res) {
+  try {
+    const { id } = req.params;
+
+    const institutions = await db.allAsync(
+      `SELECT ei.id, ei.name, ei.type, ei.website
+       FROM educational_institutions ei
+       INNER JOIN profession_educational_institutions pei ON ei.id = pei.institution_id
+       WHERE pei.profession_id = ?
+       ORDER BY ei.name`,
+      [id]
+    );
+
+    res.json({ data: institutions });
+  } catch (err) {
+    console.error('GetEducationalInstitutions error:', err);
+    res.status(500).json({ message: 'Ошибка при получении учебных заведений' });
+  }
+}

@@ -1,6 +1,6 @@
 // === Admin Page ===
 import React, { useState, useEffect } from 'react';
-import { Users, Building2, Briefcase, Calendar, Shield, Plus, Edit3, Trash2, X, Bot } from 'lucide-react';
+import { Users, Building2, Briefcase, Calendar, Shield, Plus, Edit3, Trash2, X, Bot, GraduationCap, Download, MessageSquare } from 'lucide-react';
 import { api } from '../api/client';
 import YandexMapSelector from '../components/YandexMapSelector';
 import { useToastStore } from '../store/useToastStore';
@@ -10,6 +10,9 @@ const TABS = [
   { key: 'users', label: 'Пользователи', icon: Users },
   { key: 'professions', label: 'Профессии', icon: Briefcase },
   { key: 'enterprises', label: 'Предприятия', icon: Building2 },
+  { key: 'institutions', label: 'Учебные заведения', icon: GraduationCap },
+  { key: 'applications', label: 'Отклики', icon: Briefcase },
+  { key: 'vk', label: 'Оповещения ВК', icon: MessageSquare },
   { key: 'ai', label: 'AI Ассистент', icon: Bot },
 ];
 
@@ -36,6 +39,23 @@ export function AdminPage() {
   });
   const [enterpriseUsers, setEnterpriseUsers] = useState([]);
 
+  // Institutions state
+  const [institutions, setInstitutions] = useState([]);
+  const [showInstModal, setShowInstModal] = useState(false);
+  const [instForm, setInstForm] = useState({ name: '', type: 'колледж', website: '' });
+  const [linkProfessionId, setLinkProfessionId] = useState('');
+  const [linkInstitutionId, setLinkInstitutionId] = useState('');
+
+  // Applications state
+  const [allApplications, setAllApplications] = useState([]);
+  const [appFilterEnterprise, setAppFilterEnterprise] = useState('');
+  const [appFilterProfession, setAppFilterProfession] = useState('');
+
+  // VK credentials state
+  const [vkCreds, setVkCreds] = useState({ VK_ADMIN_ID: '', VK_TOKEN: '' });
+  const [vkCredsForm, setVkCredsForm] = useState({ VK_ADMIN_ID: '', VK_TOKEN: '' });
+  const [vkCredsSaving, setVkCredsSaving] = useState(false);
+
   // AI credentials state
   const [aiCreds, setAiCreds] = useState({ AI_API_URL: '', AI_API_KEY: '', AI_API_MODEL: '', AI_SYSTEM_PROMPT: '' });
   const [aiCredsForm, setAiCredsForm] = useState({ AI_API_URL: '', AI_API_KEY: '', AI_API_MODEL: '', AI_SYSTEM_PROMPT: '' });
@@ -48,6 +68,15 @@ export function AdminPage() {
   useEffect(() => {
     if (activeTab === 'ai') {
       loadAiCreds();
+    }
+    if (activeTab === 'vk') {
+      loadVkCreds();
+    }
+    if (activeTab === 'institutions') {
+      loadInstitutions();
+    }
+    if (activeTab === 'applications') {
+      loadApplications();
     }
   }, [activeTab]);
 
@@ -63,6 +92,36 @@ export function AdminPage() {
       });
     } catch (err) {
       console.error('Failed to load AI creds:', err);
+    }
+  };
+
+  const loadVkCreds = async () => {
+    try {
+      const data = await api.get('/admin/vk-creds');
+      setVkCreds(data);
+      setVkCredsForm({
+        VK_ADMIN_ID: data.VK_ADMIN_ID || '',
+        VK_TOKEN: '',
+        notify_on_new_application: data.notify_on_new_application !== false,
+        notify_on_new_user: data.notify_on_new_user !== false,
+        notify_on_new_booking: data.notify_on_new_booking !== false
+      });
+    } catch (err) {
+      console.error('Failed to load VK creds:', err);
+    }
+  };
+
+  const handleVkCredsSave = async (e) => {
+    e.preventDefault();
+    setVkCredsSaving(true);
+    try {
+      await api.put('/admin/vk-creds', vkCredsForm);
+      success('Настройки VK сохранены');
+      loadVkCreds();
+    } catch (err) {
+      error(err.message || 'Ошибка при сохранении настроек VK');
+    } finally {
+      setVkCredsSaving(false);
     }
   };
 
@@ -100,6 +159,28 @@ export function AdminPage() {
     }
   };
 
+  const loadInstitutions = async () => {
+    try {
+      const data = await api.get('/admin/educational-institutions');
+      setInstitutions(data.data);
+    } catch (err) {
+      console.error('Failed to load institutions:', err);
+    }
+  };
+
+  const loadApplications = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (appFilterEnterprise) params.append('enterprise_id', appFilterEnterprise);
+      if (appFilterProfession) params.append('profession_id', appFilterProfession);
+      const query = params.toString() ? `?${params.toString()}` : '';
+      const data = await api.get(`/admin/applications${query}`);
+      setAllApplications(data.data);
+    } catch (err) {
+      console.error('Failed to load applications:', err);
+    }
+  };
+
   const handleBlockUser = async (userId, isBlocked) => {
     try {
       await api.put(`/admin/users/${userId}/block`, { is_blocked: !isBlocked });
@@ -108,6 +189,70 @@ export function AdminPage() {
     } catch (err) {
       error(err.message || 'Ошибка');
     }
+  };
+
+  // Institution CRUD
+  const handleCreateInstitution = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/admin/educational-institutions', instForm);
+      success('Учебное заведение создано');
+      setShowInstModal(false);
+      setInstForm({ name: '', type: 'колледж', website: '' });
+      loadInstitutions();
+    } catch (err) {
+      error(err.message || 'Ошибка при создании');
+    }
+  };
+
+  const handleDeleteInstitution = async (id) => {
+    if (!window.confirm('Удалить учебное заведение?')) return;
+    try {
+      await api.delete(`/admin/educational-institutions/${id}`);
+      success('Удалено');
+      loadInstitutions();
+    } catch (err) {
+      error(err.message || 'Ошибка при удалении');
+    }
+  };
+
+  const handleLinkInstitution = async () => {
+    if (!linkProfessionId || !linkInstitutionId) {
+      error('Выберите профессию и заведение');
+      return;
+    }
+    try {
+      await api.post(`/admin/professions/${linkProfessionId}/institutions`, {
+        institution_id: parseInt(linkInstitutionId)
+      });
+      success('Заведение привязано к профессии');
+      loadInstitutions();
+    } catch (err) {
+      error(err.message || 'Ошибка при привязке');
+    }
+  };
+
+  // Applications filter and CSV export
+  useEffect(() => {
+    if (activeTab === 'applications') {
+      loadApplications();
+    }
+  }, [appFilterEnterprise, appFilterProfession]);
+
+  const exportCSV = () => {
+    const headers = ['ID', 'ФИО', 'Email', 'Предприятие', 'Профессия', 'Дата'];
+    const rows = allApplications.map(a => [
+      a.id, a.name, a.email, a.enterprise, a.profession,
+      new Date(a.created_at).toLocaleDateString('ru-RU')
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'otkliky.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   // Profession CRUD
@@ -131,7 +276,6 @@ export function AdminPage() {
   const handleProfSubmit = async (e) => {
     e.preventDefault();
 
-    // Валидация Видео ВК
     if (profForm.video_url) {
       const videoUrl = profForm.video_url.trim();
       if (!videoUrl.startsWith('https://vkvideo.ru/video_ext.php?')) {
@@ -140,10 +284,8 @@ export function AdminPage() {
       }
     }
 
-    // Валидация Ссылок на изображения (формат: "ключ":"url","ключ":"url")
     if (profForm.image_url) {
       const imagesStr = profForm.image_url.trim();
-      // Проверяем, что строка похожа на валидное JSON-представление объекта
       try {
         const parsed = JSON.parse(`{${imagesStr}}`);
         if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
@@ -154,7 +296,7 @@ export function AdminPage() {
           if (typeof val !== 'string' || !val.startsWith('http')) throw new Error(`Значение для "${key}" должно быть URL, начинающимся с http`);
         }
       } catch (validationErr) {
-        error(`Ссылки на изображения: неверный формат. Ожидается "название":"url","название":"url". Ошибка: ${validationErr.message}`);
+        error(`Ссылки на изображения: неверный формат. Ошибка: ${validationErr.message}`);
         return;
       }
     }
@@ -213,8 +355,6 @@ export function AdminPage() {
         longitude: ent.longitude != null ? String(ent.longitude) : '',
         user_id: ent.user_id != null ? String(ent.user_id) : ''
       });
-      // при редактировании передаём exclude_enterprise_id, чтобы при необходимости
-      // можно было назначить другого enterprise-пользователя (если текущий уже не подходит)
       await loadEnterpriseUsers(ent.id);
     } else {
       setEditingEnt(null);
@@ -315,6 +455,16 @@ export function AdminPage() {
                 <div className="icon"><Calendar size={22} /></div>
                 <h4>{stats?.activeSlots || 0}</h4>
                 <p>Активных слотов</p>
+              </div>
+              <div className="feature">
+                <div className="icon"><Briefcase size={22} /></div>
+                <h4>{stats?.vacancies || 0}</h4>
+                <p>Вакансий</p>
+              </div>
+              <div className="feature">
+                <div className="icon"><Briefcase size={22} /></div>
+                <h4>{stats?.applications || 0}</h4>
+                <p>Откликов</p>
               </div>
             </div>
           )}
@@ -476,12 +626,255 @@ export function AdminPage() {
             </div>
           )}
 
+          {/* === Tab: Institutions === */}
+          {activeTab === 'institutions' && (
+            <div className="section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h2 style={{ margin: 0 }}>Учебные заведения</h2>
+                <button className="btn primary small" onClick={() => setShowInstModal(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Plus size={16} />
+                  Добавить
+                </button>
+              </div>
+
+              {/* Link institution to profession */}
+              <div style={{ padding: 16, background: 'var(--surface2)', borderRadius: 14, marginBottom: 16, display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, alignItems: 'end' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: 'var(--muted)' }}>Профессия</label>
+                  <select
+                    value={linkProfessionId}
+                    onChange={e => setLinkProfessionId(e.target.value)}
+                    className="select"
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">— Выберите —</option>
+                    {professions.map(p => (
+                      <option key={p.id} value={p.id}>{p.title}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: 'var(--muted)' }}>Учебное заведение</label>
+                  <select
+                    value={linkInstitutionId}
+                    onChange={e => setLinkInstitutionId(e.target.value)}
+                    className="select"
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">— Выберите —</option>
+                    {institutions.map(inst => (
+                      <option key={inst.id} value={inst.id}>{inst.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button className="btn primary" onClick={handleLinkInstitution}>Привязать</button>
+              </div>
+
+              {institutions.length === 0 ? (
+                <div className="empty-state"><p>Нет учебных заведений</p></div>
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {institutions.map(inst => (
+                    <div
+                      key={inst.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '12px 16px',
+                        background: 'var(--surface2)',
+                        borderRadius: 12,
+                        gap: 12
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <strong>{inst.name}</strong>
+                        <span style={{ marginLeft: 8, color: 'var(--muted)', fontSize: 13 }}>{inst.type}</span>
+                        {inst.website && (
+                          <span style={{ marginLeft: 8, color: 'var(--primary)', fontSize: 13 }}>{inst.website}</span>
+                        )}
+                        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                          Привязано к {inst.profession_count || 0} профессиям
+                        </p>
+                      </div>
+                      <button
+                        className="btn secondary small"
+                        onClick={() => handleDeleteInstitution(inst.id)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#C0392B' }}
+                      >
+                        <Trash2 size={14} />
+                        Удалить
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* === Tab: Applications === */}
+          {activeTab === 'applications' && (
+            <div className="section">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+                <h2 style={{ margin: 0 }}>Отклики на вакансии</h2>
+                <button className="btn secondary small" onClick={exportCSV} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Download size={16} />
+                  Скачать CSV
+                </button>
+              </div>
+
+              {/* Filters */}
+              <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: 'var(--muted)' }}>Предприятие</label>
+                  <select
+                    value={appFilterEnterprise}
+                    onChange={e => setAppFilterEnterprise(e.target.value)}
+                    className="select"
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">Все</option>
+                    {enterprises.map(e => (
+                      <option key={e.id} value={e.id}>{e.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: 'var(--muted)' }}>Профессия</label>
+                  <select
+                    value={appFilterProfession}
+                    onChange={e => setAppFilterProfession(e.target.value)}
+                    className="select"
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">Все</option>
+                    {professions.map(p => (
+                      <option key={p.id} value={p.id}>{p.title}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {allApplications.length === 0 ? (
+                <div className="empty-state"><p>Нет откликов</p></div>
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {allApplications.map(app => (
+                    <div
+                      key={app.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '12px 16px',
+                        background: 'var(--surface2)',
+                        borderRadius: 12,
+                        gap: 12
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <strong>{app.name}</strong>
+                        <span style={{ marginLeft: 8, color: 'var(--muted)', fontSize: 13 }}>{app.email}</span>
+                        <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
+                          🏭 {app.enterprise} — 💼 {app.profession}
+                        </p>
+                      </div>
+                      <span style={{ color: 'var(--muted)', fontSize: 12, flexShrink: 0 }}>
+                        {new Date(app.created_at).toLocaleDateString('ru-RU')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* === Tab: VK === */}
+          {activeTab === 'vk' && (
+            <div className="section">
+              <h2>Настройки оповещений ВКонтакте</h2>
+
+              <div style={{ marginBottom: 20, padding: 16, background: 'var(--surface2)', borderRadius: 14 }}>
+                <h4 style={{ marginBottom: 8 }}>Текущие настройки</h4>
+                <p style={{ fontSize: 14, margin: '4px 0' }}>
+                  <strong>ID администратора:</strong> {vkCreds.VK_ADMIN_ID || 'не указан'}
+                </p>
+                <p style={{ fontSize: 14, margin: '4px 0' }}>
+                  <strong>Токен группы:</strong> {vkCreds.VK_TOKEN || 'не указан'}
+                </p>
+              </div>
+
+              <form onSubmit={handleVkCredsSave}>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>ID администратора ВК</label>
+                  <input
+                    className="input"
+                    value={vkCredsForm.VK_ADMIN_ID}
+                    onChange={e => setVkCredsForm(prev => ({ ...prev, VK_ADMIN_ID: e.target.value }))}
+                    placeholder="123456789"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>
+                    Токен сообщества {vkCreds.VK_TOKEN ? '(оставьте пустым, чтобы не менять)' : ''}
+                  </label>
+                  <input
+                    className="input"
+                    value={vkCredsForm.VK_TOKEN}
+                    onChange={e => setVkCredsForm(prev => ({ ...prev, VK_TOKEN: e.target.value }))}
+                    placeholder="vk1.a.xxxxx"
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 24 }}>
+                  <h4 style={{ marginBottom: 12 }}>События для оповещений</h4>
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14 }}>
+                      <input
+                        type="checkbox"
+                        checked={vkCredsForm.notify_on_new_application}
+                        onChange={e => setVkCredsForm(prev => ({ ...prev, notify_on_new_application: e.target.checked }))}
+                        style={{ width: 18, height: 18, cursor: 'pointer' }}
+                      />
+                      Новый отклик на вакансию
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14 }}>
+                      <input
+                        type="checkbox"
+                        checked={vkCredsForm.notify_on_new_user}
+                        onChange={e => setVkCredsForm(prev => ({ ...prev, notify_on_new_user: e.target.checked }))}
+                        style={{ width: 18, height: 18, cursor: 'pointer' }}
+                      />
+                      Новый пользователь
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14 }}>
+                      <input
+                        type="checkbox"
+                        checked={vkCredsForm.notify_on_new_booking}
+                        onChange={e => setVkCredsForm(prev => ({ ...prev, notify_on_new_booking: e.target.checked }))}
+                        style={{ width: 18, height: 18, cursor: 'pointer' }}
+                      />
+                      Новая запись на экскурсию
+                    </label>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                  <button type="submit" className="btn primary" disabled={vkCredsSaving}>
+                    {vkCredsSaving ? 'Сохранение...' : 'Сохранить настройки'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           {/* === Tab: AI === */}
           {activeTab === 'ai' && (
             <div className="section">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <h2 style={{ margin: 0 }}>Настройки AI ассистента</h2>
-              </div>
+              <h2>Настройки AI ассистента</h2>
 
               <div style={{ marginBottom: 20, padding: 16, background: 'var(--surface2)', borderRadius: 14 }}>
                 <h4 style={{ marginBottom: 8 }}>Текущие настройки</h4>
@@ -628,7 +1021,6 @@ export function AdminPage() {
                   value={profForm.video_url}
                   onChange={e => {
                     const raw = e.target.value;
-                    // Если вставлен iframe — извлекаем src
                     const match = raw.match(/<iframe[^>]+src=["']([^"']+)["']/i);
                     const value = match ? match[1] : raw;
                     setProfForm(prev => ({ ...prev, video_url: value }));
@@ -663,6 +1055,81 @@ export function AdminPage() {
         </div>
       )}
 
+      {/* Modal: Create Institution */}
+      {showInstModal && (
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowInstModal(false)}
+        >
+          <div
+            style={{
+              background: '#fff', borderRadius: 24, padding: 32,
+              maxWidth: 480, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, color: '#333' }}>Новое учебное заведение</h3>
+              <button onClick={() => setShowInstModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateInstitution}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Название *</label>
+                <input
+                  className="input"
+                  value={instForm.name}
+                  onChange={e => setInstForm({ ...instForm, name: e.target.value })}
+                  required
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
+                />
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Тип *</label>
+                <select
+                  value={instForm.type}
+                  onChange={e => setInstForm({ ...instForm, type: e.target.value })}
+                  className="select"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14, background: '#fff' }}
+                >
+                  <option value="вуз">ВУЗ</option>
+                  <option value="колледж">Колледж</option>
+                  <option value="техникум">Техникум</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Сайт (опционально)</label>
+                <input
+                  className="input"
+                  value={instForm.website}
+                  onChange={e => setInstForm({ ...instForm, website: e.target.value })}
+                  placeholder="https://..."
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button type="button" className="btn secondary" onClick={() => setShowInstModal(false)}>
+                  Отмена
+                </button>
+                <button type="submit" className="btn primary">
+                  Создать
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Modal: Create / Edit Enterprise */}
       {showEntModal && (
         <div
@@ -688,10 +1155,7 @@ export function AdminPage() {
               <h3 style={{ margin: 0, color: '#333' }}>
                 {editingEnt ? 'Редактировать предприятие' : 'Новое предприятие'}
               </h3>
-              <button
-                onClick={() => setShowEntModal(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888' }}
-              >
+              <button onClick={() => setShowEntModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888' }}>
                 <X size={20} />
               </button>
             </div>
@@ -699,71 +1163,31 @@ export function AdminPage() {
             <form onSubmit={handleEntSubmit}>
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Название *</label>
-                <input
-                  className="input"
-                  value={entForm.name}
-                  onChange={e => setEntForm(prev => ({ ...prev, name: e.target.value }))}
-                  required
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
-                />
+                <input className="input" value={entForm.name} onChange={e => setEntForm(prev => ({ ...prev, name: e.target.value }))} required style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }} />
               </div>
-
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Отрасль *</label>
-                <input
-                  className="input"
-                  value={entForm.industry}
-                  onChange={e => setEntForm(prev => ({ ...prev, industry: e.target.value }))}
-                  required
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
-                />
+                <input className="input" value={entForm.industry} onChange={e => setEntForm(prev => ({ ...prev, industry: e.target.value }))} required style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }} />
               </div>
-
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Город *</label>
-                <input
-                  className="input"
-                  value={entForm.city}
-                  onChange={e => setEntForm(prev => ({ ...prev, city: e.target.value }))}
-                  required
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
-                />
+                <input className="input" value={entForm.city} onChange={e => setEntForm(prev => ({ ...prev, city: e.target.value }))} required style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }} />
               </div>
-
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Адрес</label>
-                <input
-                  className="input"
-                  value={entForm.address}
-                  onChange={e => setEntForm(prev => ({ ...prev, address: e.target.value }))}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
-                />
+                <input className="input" value={entForm.address} onChange={e => setEntForm(prev => ({ ...prev, address: e.target.value }))} style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }} />
               </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Широта</label>
-                  <input
-                    className="input"
-                    value={entForm.latitude}
-                    onChange={e => setEntForm(prev => ({ ...prev, latitude: e.target.value }))}
-                    placeholder="55.751244"
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
-                  />
+                  <input className="input" value={entForm.latitude} onChange={e => setEntForm(prev => ({ ...prev, latitude: e.target.value }))} placeholder="55.751244" style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }} />
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Долгота</label>
-                  <input
-                    className="input"
-                    value={entForm.longitude}
-                    onChange={e => setEntForm(prev => ({ ...prev, longitude: e.target.value }))}
-                    placeholder="37.618423"
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
-                  />
+                  <input className="input" value={entForm.longitude} onChange={e => setEntForm(prev => ({ ...prev, longitude: e.target.value }))} placeholder="37.618423" style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }} />
                 </div>
               </div>
 
-              {/* Карта для выбора координат */}
               <YandexMapSelector
                 latitude={entForm.latitude ? Number(entForm.latitude) : null}
                 longitude={entForm.longitude ? Number(entForm.longitude) : null}
@@ -772,77 +1196,32 @@ export function AdminPage() {
 
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Телефон</label>
-                <input
-                  className="input"
-                  value={entForm.phone}
-                  onChange={e => setEntForm(prev => ({ ...prev, phone: e.target.value }))}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
-                />
+                <input className="input" value={entForm.phone} onChange={e => setEntForm(prev => ({ ...prev, phone: e.target.value }))} style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }} />
               </div>
-
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Сайт</label>
-                <input
-                  className="input"
-                  value={entForm.website}
-                  onChange={e => setEntForm(prev => ({ ...prev, website: e.target.value }))}
-                  placeholder="https://..."
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
-                />
+                <input className="input" value={entForm.website} onChange={e => setEntForm(prev => ({ ...prev, website: e.target.value }))} placeholder="https://..." style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }} />
               </div>
-
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Описание</label>
-                <textarea
-                  className="input"
-                  value={entForm.description}
-                  onChange={e => setEntForm(prev => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14, resize: 'vertical' }}
-                />
+                <textarea className="input" value={entForm.description} onChange={e => setEntForm(prev => ({ ...prev, description: e.target.value }))} rows={3} style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14, resize: 'vertical' }} />
               </div>
-
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Ссылка на фото</label>
-                <input
-                  className="input"
-                  value={entForm.photo_url}
-                  onChange={e => setEntForm(prev => ({ ...prev, photo_url: e.target.value }))}
-                  placeholder="https://..."
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
-                />
+                <input className="input" value={entForm.photo_url} onChange={e => setEntForm(prev => ({ ...prev, photo_url: e.target.value }))} placeholder="https://..." style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }} />
               </div>
-
-              {/* Привязка к enterprise-пользователю */}
               <div style={{ marginBottom: 24 }}>
-                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>
-                  Ответственный пользователь (enterprise)
-                </label>
-                <select
-                  value={entForm.user_id}
-                  onChange={e => setEntForm(prev => ({ ...prev, user_id: e.target.value }))}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14, background: '#fff' }}
-                >
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Ответственный пользователь (enterprise)</label>
+                <select value={entForm.user_id} onChange={e => setEntForm(prev => ({ ...prev, user_id: e.target.value }))} style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14, background: '#fff' }}>
                   <option value="">— Не выбран —</option>
                   {enterpriseUsers.map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.email})
-                    </option>
+                    <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
                   ))}
                 </select>
-                <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0' }}>
-                  Выберите пользователя с ролью enterprise, к которому ещё не привязано предприятие.
-                  Если таких нет, создайте пользователя с ролью enterprise на вкладке "Пользователи".
-                </p>
               </div>
-
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                <button type="button" className="btn secondary" onClick={() => setShowEntModal(false)}>
-                  Отмена
-                </button>
-                <button type="submit" className="btn primary">
-                  {editingEnt ? 'Сохранить' : 'Создать'}
-                </button>
+                <button type="button" className="btn secondary" onClick={() => setShowEntModal(false)}>Отмена</button>
+                <button type="submit" className="btn primary">{editingEnt ? 'Сохранить' : 'Создать'}</button>
               </div>
             </form>
           </div>

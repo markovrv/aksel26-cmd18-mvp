@@ -1,6 +1,6 @@
 // === Floating Chat Widget ===
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send } from 'lucide-react';
+import { MessageCircle, X, Send, ChevronDown } from 'lucide-react';
 import { api } from '../api/client';
 
 export function ChatWidget() {
@@ -23,6 +23,16 @@ export function ChatWidget() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Блокируем скролл страницы при открытом чате на мобильных
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -66,26 +76,7 @@ export function ChatWidget() {
       {/* Floating button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        style={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-          width: 56,
-          height: 56,
-          borderRadius: '50%',
-          background: 'var(--primary)',
-          color: '#fff',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 16px rgba(27,107,176,0.4)',
-          zIndex: 999,
-          transition: 'transform 200ms ease'
-        }}
-        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+        className={`chat-fab ${isOpen ? 'chat-fab-open' : ''}`}
         aria-label="Чат с помощником"
       >
         {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
@@ -93,91 +84,49 @@ export function ChatWidget() {
 
       {/* Chat window */}
       {isOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 92,
-            right: 24,
-            width: 380,
-            height: 520,
-            background: '#fff',
-            borderRadius: 20,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-            display: 'flex',
-            flexDirection: 'column',
-            zIndex: 999,
-            overflow: 'hidden',
-            border: '1px solid var(--border)'
-          }}
-        >
+        <div className="chat-window">
           {/* Header */}
-          <div
-            style={{
-              padding: '16px 20px',
-              background: 'var(--primary)',
-              color: '#fff',
-              fontWeight: 600,
-              fontSize: 16,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10
-            }}
-          >
-            <img
-              src="/assets/person.png"
-              alt=""
-              style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }}
-              onError={e => { e.target.style.display = 'none' }}
-            />
-            Заводыч — помощник
+          <div className="chat-header">
+            <div className="chat-header-info">
+              <img
+                src="/assets/person.png"
+                alt=""
+                className="chat-avatar"
+                onError={e => { e.target.style.display = 'none' }}
+              />
+              Заводыч — помощник
+            </div>
+            <button
+              className="chat-close-btn"
+              onClick={() => setIsOpen(false)}
+              aria-label="Закрыть чат"
+            >
+              <ChevronDown size={20} />
+            </button>
           </div>
 
           {/* Messages */}
-          <div
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: 16,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12
-            }}
-          >
+          <div className="chat-messages">
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                style={{
-                  display: 'flex',
-                  gap: 8,
-                  flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
-                  alignItems: 'flex-start'
-                }}
+                className={`chat-msg ${msg.role === 'user' ? 'chat-msg-user' : 'chat-msg-assistant'}`}
               >
                 {msg.role === 'assistant' && (
                   <img
                     src="/assets/person.png"
                     alt=""
-                    style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                    className="chat-msg-avatar"
                     onError={e => { e.target.style.display = 'none' }}
                   />
                 )}
-                <div
-                  style={{
-                    maxWidth: '80%',
-                    padding: '10px 14px',
-                    borderRadius: 14,
-                    background: msg.role === 'user' ? 'var(--primary)' : 'var(--surface2)',
-                    color: msg.role === 'user' ? '#fff' : 'var(--text)',
-                    lineHeight: 1.5,
-                    fontSize: 14
-                  }}
-                >
+                <div className={`chat-bubble ${msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant'}`}>
                   {msg.role === 'assistant' ? renderMessage(msg.text) : msg.text}
                 </div>
               </div>
             ))}
             {loading && (
-              <div style={{ padding: '10px 14px', background: 'var(--surface2)', borderRadius: 14, width: 'fit-content', fontSize: 14 }}>
+              <div className="chat-bubble chat-bubble-assistant" style={{ width: 'fit-content' }}>
                 Печатает...
               </div>
             )}
@@ -185,35 +134,20 @@ export function ChatWidget() {
           </div>
 
           {/* Input */}
-          <div
-            style={{
-              padding: '12px 16px',
-              borderTop: '1px solid var(--border)',
-              display: 'flex',
-              gap: 8,
-              background: '#fff'
-            }}
-          >
+          <div className="chat-input-bar">
             <input
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
               placeholder="Введите вопрос..."
-              style={{
-                flex: 1,
-                padding: '10px 14px',
-                border: '1px solid var(--border)',
-                borderRadius: 12,
-                fontSize: 14,
-                outline: 'none'
-              }}
+              className="chat-input"
             />
             <button
               className="btn primary"
               onClick={handleSend}
               disabled={loading || !input.trim()}
-              style={{ padding: '10px 14px', fontSize: 14, borderRadius: 12 }}
+              style={{ padding: '10px 14px', fontSize: 14, borderRadius: 12, flexShrink: 0 }}
             >
               <Send size={16} />
             </button>

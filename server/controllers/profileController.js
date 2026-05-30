@@ -53,3 +53,23 @@ export async function getVisitedEnterprises(req, res) {
     res.status(500).json({ message: 'Ошибка при получении истории посещений' });
   }
 }
+
+// === Get User Applications ===
+export async function getApplications(req, res) {
+  try {
+    const applications = await db.allAsync(
+      `SELECT va.id, e.name AS enterprise_name, p.title AS profession_title, va.created_at
+       FROM vacancy_applications va
+       JOIN enterprises e ON va.enterprise_id = e.id
+       JOIN professions p ON va.profession_id = p.id
+       WHERE va.user_id = ?
+       ORDER BY va.created_at DESC`,
+      [req.user.id]
+    );
+
+    res.json({ data: applications });
+  } catch (err) {
+    console.error('GetApplications error:', err);
+    res.status(500).json({ message: 'Ошибка при получении откликов' });
+  }
+}

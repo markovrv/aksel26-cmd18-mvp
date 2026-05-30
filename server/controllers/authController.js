@@ -38,6 +38,12 @@ export async function register(req, res) {
       sameSite: 'lax'
     });
 
+    sendVkNotification('new_user', {
+      userName: name,
+      email: email,
+      createdAt: new Date().toISOString()
+    });
+
     res.status(201).json({
       message: 'Регистрация успешна',
       user: { id: result.lastID, email, name, role }

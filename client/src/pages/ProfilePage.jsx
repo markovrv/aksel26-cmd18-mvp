@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useToastStore } from '../store/useToastStore';
-import { User, Mail, Phone, MapPin } from 'lucide-react';
+import { User } from 'lucide-react';
 
 export function ProfilePage() {
   const { user, updateProfile } = useAuthStore();

@@ -22,6 +22,7 @@ export function Sidebar({ isOpen, onClose }) {
 
   const authItems = [
     { path: '/bookings', icon: Calendar, label: 'Мои записи' },
+    { path: '/applications', icon: Briefcase, label: 'Мои отклики' },
     { path: '/help', icon: HelpCircle, label: 'Помощь' },
     { path: '/profile', icon: User, label: 'Профиль' },
   ];

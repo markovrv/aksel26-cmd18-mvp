@@ -39,7 +39,7 @@ export function HomePage() {
             </div>
             <h1>Открой мир профессий в Кировской области</h1>
             <p className="lead1">
-              Выбери профессию, найди предприятие и запишись на экскурсию — всё в одном месте
+               Выбери профессию, познакомься с предприятиями и найди своё первое место работы.
             </p>
             <div className="hero-actions">
               <Link to="/professions" className="btn primary">

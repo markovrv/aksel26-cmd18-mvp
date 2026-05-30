@@ -77,6 +77,30 @@ async function buildContextInfo(userId) {
         } else {
           parts.push(`\nБронирования: нет`);
         }
+
+        // Отклики на вакансии пользователя
+        try {
+          const applications = await db.allAsync(
+            `SELECT va.created_at, e.name as enterprise_name, p.title as profession_title
+             FROM vacancy_applications va
+             JOIN enterprises e ON va.enterprise_id = e.id
+             JOIN professions p ON va.profession_id = p.id
+             WHERE va.user_id = ?
+             ORDER BY va.created_at DESC LIMIT 10`,
+            [userId]
+          );
+
+          if (applications.length > 0) {
+            parts.push(`\nОтклики на вакансии пользователя:`);
+            for (const a of applications) {
+              parts.push(`- ${a.enterprise_name} — ${a.profession_title} (отклик отправлен ${a.created_at})`);
+            }
+          } else {
+            parts.push(`\nОтклики на вакансии: нет`);
+          }
+        } catch (err) {
+          console.error('Failed to load user applications for AI context:', err.message);
+        }
       }
     } catch (err) {
       console.error('Failed to load user info for AI context:', err.message);

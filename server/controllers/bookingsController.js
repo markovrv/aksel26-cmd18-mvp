@@ -2,6 +2,7 @@
 import db from '../db/index.js';
 import QRCode from 'qrcode';
 import crypto from 'crypto';
+import { sendVkNotification } from '../utils/vkNotify.js';
 
 // === Create Booking ===
 export async function createBooking(req, res) {
@@ -45,6 +46,16 @@ export async function createBooking(req, res) {
       'INSERT INTO qr_codes (booking_id, token) VALUES (?, ?)',
       [result.lastID, token]
     );
+
+    // Get enterprise name for notification
+    const enterprise = await db.getAsync('SELECT name FROM enterprises WHERE id = ?', [enterprise_id]);
+
+    sendVkNotification('new_booking', {
+      userName: req.user.name,
+      enterpriseName: enterprise ? enterprise.name : 'не указано',
+      date: slot.date,
+      time: slot.time
+    });
 
     res.status(201).json({
       message: 'Запись создана',

@@ -53,3 +53,79 @@
 .nav-link:hover {
   background: rgba(255,255,255,0.12);
 }
+
+/* === Profession Institutions Block === */
+.profession-institutions h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profession-institutions ul {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: grid;
+  gap: 12px;
+}
+
+.profession-institutions li {
+  padding: 16px;
+  background: var(--surface2);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profession-institutions .inst-type {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--surface3);
+  color: var(--muted);
+  margin-left: auto;
+}
+
+/* === Enterprise Vacancies Block === */
+.enterprise-vacancies h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vacancy-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: grid;
+  gap: 12px;
+}
+
+.vacancy-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: var(--surface2);
+  border-radius: 14px;
+  gap: 16px;
+}
+
+.vacancy-title {
+  font-weight: 600;
+}
+
+.vacancy-slots {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.btn-apply {
+  flex-shrink: 0;
+}
+
+.empty-hint {
+  color: var(--muted);
+  font-size: 14px;
+}

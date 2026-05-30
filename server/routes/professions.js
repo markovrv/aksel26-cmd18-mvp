@@ -16,6 +16,9 @@ router.get('/:id', professionsController.getProfession);
 // Get enterprises by profession
 router.get('/:id/enterprises', professionsController.getProfessionEnterprises);
 
+// Get educational institutions by profession
+router.get('/:id/educational-institutions', professionsController.getEducationalInstitutions);
+
 // Create profession (admin)
 router.post(
   '/',

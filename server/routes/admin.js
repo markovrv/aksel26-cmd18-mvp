@@ -34,4 +34,50 @@ router.get('/ai-creds', authenticate, requireRole('admin'), adminController.getA
 // Update AI credentials
 router.put('/ai-creds', authenticate, requireRole('admin'), adminController.updateAiCreds);
 
+// === Educational Institutions ===
+
+// Get all educational institutions
+router.get('/educational-institutions', authenticate, requireRole('admin'), adminController.getEducationalInstitutions);
+
+// Create educational institution
+router.post(
+  '/educational-institutions',
+  authenticate,
+  requireRole('admin'),
+  [
+    body('name').trim().notEmpty().withMessage('Название обязательно'),
+    body('type').trim().isIn(['вуз', 'колледж', 'техникум']).withMessage('Тип должен быть: вуз, колледж, техникум'),
+    body('website').optional()
+  ],
+  handleValidationErrors,
+  adminController.createEducationalInstitution
+);
+
+// Delete educational institution
+router.delete('/educational-institutions/:id', authenticate, requireRole('admin'), adminController.deleteEducationalInstitution);
+
+// Link institution to profession
+router.post('/professions/:id/institutions', authenticate, requireRole('admin'), [
+  body('institution_id').isInt().withMessage('ID заведения обязателен')
+], handleValidationErrors, (req, res) => {
+  req.params.instId = req.body.institution_id;
+  adminController.linkInstitutionToProfession(req, res);
+});
+
+// Unlink institution from profession
+router.delete('/professions/:id/institutions/:instId', authenticate, requireRole('admin'), adminController.unlinkInstitutionFromProfession);
+
+// === Applications ===
+
+// Get all applications
+router.get('/applications', authenticate, requireRole('admin'), adminController.getAllApplications);
+
+// === VK Credentials ===
+
+// Get VK credentials
+router.get('/vk-creds', authenticate, requireRole('admin'), adminController.getVkCreds);
+
+// Update VK credentials
+router.put('/vk-creds', authenticate, requireRole('admin'), adminController.updateVkCreds);
+
 export default router;

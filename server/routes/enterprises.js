@@ -4,6 +4,7 @@ import { body } from 'express-validator';
 import { handleValidationErrors } from '../middleware/validate.js';
 import { authenticate, requireRole, requireNotBlocked } from '../middleware/auth.js';
 import * as enterprisesController from '../controllers/enterprisesController.js';
+import * as vacanciesController from '../controllers/vacanciesController.js';
 
 const router = express.Router();
 
@@ -19,8 +20,14 @@ router.get('/:id', enterprisesController.getEnterprise);
 // Get enterprise slots
 router.get('/:id/slots', enterprisesController.getEnterpriseSlots);
 
+// Get enterprise vacancies
+router.get('/:id/vacancies', vacanciesController.getEnterpriseVacancies);
+
 // Get enterprise bookings (enterprise owner or admin)
 router.get('/:id/bookings', authenticate, requireNotBlocked, enterprisesController.getEnterpriseBookings);
+
+// Get enterprise applications (enterprise owner or admin)
+router.get('/:id/applications', authenticate, requireRole('enterprise', 'admin'), requireNotBlocked, vacanciesController.getEnterpriseApplications);
 
 // Create enterprise
 router.post(
@@ -63,6 +70,20 @@ router.post(
   ],
   handleValidationErrors,
   enterprisesController.createSlot
+);
+
+// Create vacancy for enterprise
+router.post(
+  '/:id/vacancies',
+  authenticate,
+  requireRole('enterprise', 'admin'),
+  requireNotBlocked,
+  [
+    body('profession_id').isInt().withMessage('ID профессии обязателен'),
+    body('available_slots').optional().isInt({ min: 1 }).withMessage('Количество мест должно быть числом')
+  ],
+  handleValidationErrors,
+  vacanciesController.createVacancy
 );
 
 export default router;

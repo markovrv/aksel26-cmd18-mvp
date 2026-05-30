@@ -92,6 +92,43 @@ CREATE TABLE IF NOT EXISTS ai_chat_history (
   created_at TEXT   NOT NULL DEFAULT (datetime('now'))
 );
 
+-- === Новые таблицы ===
+
+-- Учебные заведения
+CREATE TABLE IF NOT EXISTS educational_institutions (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  name       TEXT NOT NULL,
+  type       TEXT NOT NULL CHECK(type IN ('вуз','колледж','техникум')),
+  website    TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Связь профессий с учебными заведениями (many-to-many)
+CREATE TABLE IF NOT EXISTS profession_educational_institutions (
+  profession_id  INTEGER NOT NULL REFERENCES professions(id) ON DELETE CASCADE,
+  institution_id INTEGER NOT NULL REFERENCES educational_institutions(id) ON DELETE CASCADE,
+  PRIMARY KEY (profession_id, institution_id)
+);
+
+-- Вакансии предприятия
+CREATE TABLE IF NOT EXISTS vacancies (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  enterprise_id   INTEGER NOT NULL REFERENCES enterprises(id) ON DELETE CASCADE,
+  profession_id   INTEGER NOT NULL REFERENCES professions(id) ON DELETE CASCADE,
+  available_slots INTEGER NOT NULL DEFAULT 1,
+  created_at      TEXT DEFAULT (datetime('now'))
+);
+
+-- Отклики на вакансии
+CREATE TABLE IF NOT EXISTS vacancy_applications (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  enterprise_id INTEGER NOT NULL REFERENCES enterprises(id) ON DELETE CASCADE,
+  profession_id INTEGER NOT NULL REFERENCES professions(id) ON DELETE CASCADE,
+  created_at    TEXT DEFAULT (datetime('now')),
+  UNIQUE(user_id, enterprise_id, profession_id)
+);
+
 -- Индексы для производительности
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
@@ -102,3 +139,6 @@ CREATE INDEX IF NOT EXISTS idx_bookings_slot ON bookings(slot_id);
 CREATE INDEX IF NOT EXISTS idx_qr_token ON qr_codes(token);
 CREATE INDEX IF NOT EXISTS idx_enterprises_city ON enterprises(city);
 CREATE INDEX IF NOT EXISTS idx_enterprises_industry ON enterprises(industry);
+CREATE INDEX IF NOT EXISTS idx_vacancies_enterprise ON vacancies(enterprise_id);
+CREATE INDEX IF NOT EXISTS idx_vacancy_applications_user ON vacancy_applications(user_id);
+CREATE INDEX IF NOT EXISTS idx_vacancy_applications_enterprise ON vacancy_applications(enterprise_id);

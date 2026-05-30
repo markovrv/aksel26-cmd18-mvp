@@ -25,6 +25,7 @@ import profileRoutes from './routes/profile.js';
 import adminRoutes from './routes/admin.js';
 import aiRoutes from './routes/ai.js';
 import widgetRoutes from './routes/widget.js';
+import vacancyRoutes from './routes/vacancies.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -74,6 +75,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/widget', widgetRoutes);
+app.use('/api/vacancies', vacancyRoutes);
 
 // === SPA Fallback: serve index.html for non-API routes ===
 app.get('*', (req, res) => {

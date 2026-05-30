@@ -20,6 +20,7 @@ import { HelpPage } from './pages/HelpPage';
 import { MapPage } from './pages/MapPage';
 import { EnterprisePanelPage } from './pages/EnterprisePanelPage';
 import { AdminPage } from './pages/AdminPage';
+import { ApplicationsPage } from './pages/ApplicationsPage';
 
 function ProtectedRoute({ children, roles }) {
   const { user, isLoading } = useAuthStore();
@@ -64,6 +65,7 @@ export default function App() {
 
         {/* Protected routes — require auth */}
         <Route path="/bookings" element={<ProtectedRoute><Layout><BookingsPage /></Layout></ProtectedRoute>} />
+        <Route path="/applications" element={<ProtectedRoute><Layout><ApplicationsPage /></Layout></ProtectedRoute>} />
         <Route path="/qr" element={<ProtectedRoute><Layout><QRScannerPage /></Layout></ProtectedRoute>} />
         <Route path="/help" element={<ProtectedRoute><Layout><HelpPage /></Layout></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Layout><ProfilePage /></Layout></ProtectedRoute>} />
