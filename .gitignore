@@ -53,3 +53,5 @@ uploads/*
 *.pid.lock
 
 package-lock.json
+
+*.pdf

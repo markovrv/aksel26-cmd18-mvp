@@ -4,15 +4,18 @@
 
 ## Возможности
 
-- 🔍 **Каталог профессий** — поиск и фильтрация по отраслям, видео-визитки
+- 🔍 **Каталог профессий** — поиск и фильтрация по отраслям, видео-визитки, галерея изображений
 - 🏭 **Предприятия** — карточки с описанием, контактами и расположением на карте
 - 🗺️ **Карта** — интерактивная карта предприятий (Яндекс.Карты)
+- 🎓 **Учебные заведения** — привязка вузов/колледжей/техникумов к профессиям
 - 📅 **Запись на экскурсии** — выбор даты и времени, управление бронированиями
 - ✅ **QR-коды** — отметка о посещении через сканирование
-- 🤖 **ИИ-помощник** — чат для вопросов о профессиях и предприятиях
-- 👤 **Личный кабинет** — профиль, история посещений, управление записями
-- 🛡️ **Админ-панель** — управление пользователями, профессиями, предприятиями, статистика, настройки AI
-- 🖥️ **Панель предприятия** — управление слотами и записями, редактирование профиля
+- 💼 **Вакансии** — предприятия публикуют вакансии, пользователи откликаются
+- 🤖 **ИИ-помощник** — чат для вопросов о профессиях и предприятиях (с контекстом пользователя)
+- 👤 **Личный кабинет** — профиль, история посещений, отклики на вакансии
+- 🛡️ **Админ-панель** — управление пользователями, профессиями, предприятиями, учебными заведениями, статистика, настройки AI, настройки VK
+- 🖥️ **Панель предприятия** — управление слотами, записями, вакансиями, редактирование профиля
+- 📢 **VK-оповещения** — уведомления о новых откликах, пользователях и записях (включаются/выключаются в админке)
 
 ## Технический стек
 
@@ -32,11 +35,11 @@
 - **express-validator** — валидация
 - **Winston** — логирование
 - **Multer** — загрузка файлов
-- **Nodemailer** — email-уведомления
 
 ### Инфраструктура
 - **Docker** + **docker-compose**
 - **Helmet**, **CORS**, **rate-limit** — безопасность
+- **VK API** (messages.send) — оповещения
 
 ## Быстрый старт
 
@@ -108,6 +111,7 @@ docker-compose up --build
 | GET | `/api/professions` | — | Список профессий (search, industry, page, limit) |
 | GET | `/api/professions/:id` | — | Детали профессии |
 | GET | `/api/professions/:id/enterprises` | — | Предприятия по профессии |
+| GET | `/api/professions/:id/educational-institutions` | — | Учебные заведения по профессии |
 | POST | `/api/professions` | Admin | Создать профессию |
 | PUT | `/api/professions/:id` | Admin | Обновить профессию |
 | DELETE | `/api/professions/:id` | Admin | Удалить профессию |
@@ -120,11 +124,14 @@ docker-compose up --build
 | GET | `/api/enterprises/geo` | — | Geo-данные для карты (с координатами) |
 | GET | `/api/enterprises/:id` | — | Детали предприятия (с профессиями и количеством слотов) |
 | GET | `/api/enterprises/:id/slots` | — | Слоты предприятия |
+| GET | `/api/enterprises/:id/vacancies` | — | Вакансии предприятия |
 | GET | `/api/enterprises/:id/bookings` | Enterprise/Admin | Записи предприятия |
+| GET | `/api/enterprises/:id/applications` | Enterprise/Admin | Отклики на вакансии предприятия |
 | POST | `/api/enterprises` | Enterprise/Admin | Создать предприятие |
 | PUT | `/api/enterprises/:id` | Enterprise/Admin | Обновить предприятие |
 | DELETE | `/api/enterprises/:id` | Admin | Удалить предприятие |
 | POST | `/api/enterprises/:id/slots` | Enterprise/Admin | Создать слот |
+| POST | `/api/enterprises/:id/vacancies` | Enterprise/Admin | Создать вакансию |
 
 ### Slots (`/api/slots`)
 
@@ -140,6 +147,13 @@ docker-compose up --build
 | GET | `/api/bookings/my` | Auth | Мои бронирования |
 | DELETE | `/api/bookings/:id` | Auth | Отменить бронирование |
 
+### Vacancies (`/api/vacancies`)
+
+| Метод | Путь | Аутентификация | Описание |
+|-------|------|---------------|----------|
+| POST | `/api/vacancies/:vacancyId/apply` | Auth | Откликнуться на вакансию |
+| DELETE | `/api/vacancies/:vacancyId` | Enterprise/Admin | Удалить вакансию |
+
 ### QR (`/api/qr`)
 
 | Метод | Путь | Аутентификация | Описание |
@@ -154,6 +168,8 @@ docker-compose up --build
 | GET | `/api/profile` | Auth | Профиль пользователя |
 | PUT | `/api/profile` | Auth | Обновить профиль (name, phone, city, avatar_url) |
 | GET | `/api/profile/visited` | Auth | Посещённые предприятия |
+| GET | `/api/profile/applications` | Auth | Мои отклики на вакансии |
+| DELETE | `/api/profile/applications/:applicationId` | Auth | Отменить отклик |
 
 ### Admin (`/api/admin`)
 
@@ -161,10 +177,18 @@ docker-compose up --build
 |-------|------|---------------|----------|
 | GET | `/api/admin/users` | Admin | Список пользователей |
 | PUT | `/api/admin/users/:id/block` | Admin | Заблокировать/разблокировать пользователя |
-| GET | `/api/admin/stats` | Admin | Статистика (users, enterprises, professions, bookings, visited, activeSlots) |
+| GET | `/api/admin/stats` | Admin | Статистика (users, enterprises, professions, bookings, visited, activeSlots, vacancies, applications) |
 | GET | `/api/admin/enterprise-users-available` | Admin | Доступные enterprise-пользователи |
 | GET | `/api/admin/ai-creds` | Admin | Настройки AI ассистента |
 | PUT | `/api/admin/ai-creds` | Admin | Сохранить настройки AI |
+| GET | `/api/admin/educational-institutions` | Admin | Список учебных заведений |
+| POST | `/api/admin/educational-institutions` | Admin | Создать учебное заведение |
+| DELETE | `/api/admin/educational-institutions/:id` | Admin | Удалить учебное заведение |
+| POST | `/api/admin/professions/:id/institutions` | Admin | Привязать заведение к профессии |
+| DELETE | `/api/admin/professions/:id/institutions/:instId` | Admin | Отвязать заведение от профессии |
+| GET | `/api/admin/applications` | Admin | Все отклики (с фильтрацией по предприятию/профессии) |
+| GET | `/api/admin/vk-creds` | Admin | Настройки VK оповещений |
+| PUT | `/api/admin/vk-creds` | Admin | Сохранить настройки VK |
 
 ### AI (`/api/ai`)
 
@@ -272,6 +296,40 @@ docker-compose up --build
 | content | TEXT | Текст сообщения |
 | created_at | TEXT | |
 
+### educational_institutions
+| Поле | Тип | Описание |
+|------|-----|----------|
+| id | INTEGER PK | |
+| name | TEXT | Название |
+| type | TEXT | Тип: `вуз`, `колледж`, `техникум` |
+| website | TEXT | Сайт |
+| created_at | TEXT | |
+
+### profession_educational_institutions (many-to-many)
+| Поле | Тип | Описание |
+|------|-----|----------|
+| profession_id | INTEGER PK, FK → professions.id | |
+| institution_id | INTEGER PK, FK → educational_institutions.id | |
+
+### vacancies
+| Поле | Тип | Описание |
+|------|-----|----------|
+| id | INTEGER PK | |
+| enterprise_id | INTEGER FK → enterprises.id | |
+| profession_id | INTEGER FK → professions.id | |
+| available_slots | INTEGER | Кол-во вакантных мест |
+| created_at | TEXT | |
+
+### vacancy_applications
+| Поле | Тип | Описание |
+|------|-----|----------|
+| id | INTEGER PK | |
+| user_id | INTEGER FK → users.id | |
+| enterprise_id | INTEGER FK → enterprises.id | |
+| profession_id | INTEGER FK → professions.id | |
+| created_at | TEXT | |
+| UNIQUE(user_id, enterprise_id, profession_id) | | |
+
 ## Структура проекта
 
 ```
@@ -293,18 +351,19 @@ zavodych/
 │   │   ├── pages/
 │   │   │   ├── HomePage.jsx
 │   │   │   ├── ProfessionsPage.jsx
-│   │   │   ├── ProfessionDetailPage.jsx
+│   │   │   ├── ProfessionDetailPage.jsx  # + учебные заведения
 │   │   │   ├── EnterprisesPage.jsx
-│   │   │   ├── EnterpriseDetailPage.jsx
+│   │   │   ├── EnterpriseDetailPage.jsx  # + вакансии
 │   │   │   ├── MapPage.jsx
 │   │   │   ├── LoginPage.jsx
 │   │   │   ├── RegisterPage.jsx
 │   │   │   ├── ProfilePage.jsx
 │   │   │   ├── BookingsPage.jsx
+│   │   │   ├── ApplicationsPage.jsx     # Мои отклики
 │   │   │   ├── QRScannerPage.jsx
 │   │   │   ├── HelpPage.jsx
-│   │   │   ├── EnterprisePanelPage.jsx  # Панель предприятия
-│   │   │   └── AdminPage.jsx            # Админ-панель
+│   │   │   ├── EnterprisePanelPage.jsx  # + вакансии, отклики
+│   │   │   └── AdminPage.jsx            # + учеб.заведения, отклики, VK
 │   │   ├── store/
 │   │   │   ├── useAuthStore.js   # Zustand (аутентификация)
 │   │   │   └── useToastStore.js  # Zustand (уведомления)
@@ -316,50 +375,57 @@ zavodych/
 │   └── vite.config.js
 ├── server/                       # Express backend
 │   ├── controllers/
-│   │   ├── adminController.js
+│   │   ├── adminController.js    # + учеб.заведения, отклики, VK creds
 │   │   ├── aiController.js
-│   │   ├── authController.js
-│   │   ├── bookingsController.js
+│   │   ├── authController.js     # + VK уведомление при регистрации
+│   │   ├── bookingsController.js # + VK уведомление при записи
 │   │   ├── chatWidgetController.js
 │   │   ├── enterprisesController.js
-│   │   ├── professionsController.js
-│   │   ├── profileController.js
+│   │   ├── professionsController.js  # + getEducationalInstitutions
+│   │   ├── profileController.js  # + getApplications
 │   │   ├── qrController.js
-│   │   └── slotsController.js
+│   │   ├── slotsController.js
+│   │   └── vacanciesController.js    # + apply, cancel, VK уведомление
 │   ├── db/
 │   │   ├── index.js             # Подключение к SQLite
-│   │   ├── schema.sql           # Полная схема БД
-│   │   └── seed.js              # Тестовые данные
+│   │   ├── schema.sql           # Полная схема БД (+ нов. таблицы)
+│   │   └── seed.js              # Тестовые данные (+ учеб.заведения, вакансии)
 │   ├── middleware/
 │   │   ├── auth.js              # JWT, роли, блокировка
 │   │   ├── upload.js            # Multer
 │   │   └── validate.js          # Валидация
 │   ├── routes/
-│   │   ├── admin.js
+│   │   ├── admin.js             # + vk-creds, educational-institutions
 │   │   ├── ai.js
 │   │   ├── auth.js
 │   │   ├── bookings.js
-│   │   ├── enterprises.js
-│   │   ├── professions.js
-│   │   ├── profile.js
+│   │   ├── enterprises.js       # + vacancies, applications
+│   │   ├── professions.js       # + educational-institutions
+│   │   ├── profile.js           # + applications, cancel
 │   │   ├── qr.js
 │   │   ├── slots.js
+│   │   ├── vacancies.js         # Новый файл
 │   │   └── widget.js
 │   ├── utils/
-│   │   ├── aiChat.js            # Вызов AI API
+│   │   ├── aiChat.js            # + контекст вакансий/откликов
 │   │   ├── aiCreds.js           # Управление AI-ключами
+│   │   ├── vkCreds.js           # Управление VK-ключами (vk-cred.json)
+│   │   ├── vkNotify.js          # VK API уведомления (с флагами событий)
 │   │   ├── config.js            # Конфигурация приложения
 │   │   └── logger.js            # Winston
 │   ├── index.js                 # Точка входа сервера
 │   └── package.json
 ├── uploads/                      # Загруженные файлы
+├── vk-cred.json                  # Настройки VK (создаётся через админку)
 ├── .dockerignore
+├── .env.example
 ├── .gitignore
 ├── DEVELOPMENT_LOG.md
 ├── docker-compose.yml
 ├── docker-entrypoint.sh
 ├── Dockerfile
 ├── qr-scanner-demo.html
+├── test-vk-notify.js            # Тест VK уведомлений
 └── README.md
 ```
 
@@ -367,13 +433,25 @@ zavodych/
 
 | Переменная | Описание |
 |-----------|----------|
-| `JWT_SECRET` | Секретный ключ для JWT |
-| `DB_PATH` | Путь к SQLite |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` | SMTP для писем |
-| `AI_API_KEY` / `AI_API_URL` / `AI_API_MODEL` | ИИ-чат |
-| `YMAPS_API_KEY` | Ключ Яндекс.Карт |
+| `JWT_SECRET` | Секретный ключ для JWT (обязательно) |
 | `PORT` | Порт сервера (по умолчанию 3001) |
 | `CLIENT_URL` | URL клиента (по умолчанию http://localhost:5173) |
+
+Настройки AI и VK управляются через админ-панель и сохраняются в файлах `ai-cred.json` и `vk-cred.json` соответственно.
+
+## VK Оповещения
+
+Настройки VK оповещений доступны в админ-панели (вкладка "Оповещения ВК"):
+- **ID администратора ВК** — кому отправлять уведомления
+- **Токен сообщества** — токен группы ВК с правом `messages.send`
+- **События** (вкл/выкл):
+  - 🆕 Новый отклик на вакансию
+  - 👤 Новый пользователь
+  - 📅 Новая запись на экскурсию
+
+Данные хранятся в `server/vk-cred.json`.
+
+Тестовый скрипт: `node test-vk-notify.js` (перед запуском установить VK_ADMIN_ID и VK_TOKEN в .env или переменные окружения).
 
 ## Лицензия
 

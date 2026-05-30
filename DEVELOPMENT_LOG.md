@@ -1,162 +1,133 @@
-# Заводыч — Лог разработки
+# Отчёт о выполненной работе — Платформа «Заводыч»
 
-## Статус проекта
-Проект завершён на 100%. MVP портала профориентации готов к использованию.
+**Дата:** 30–31 мая 2026
 
-## Архитектура
+---
 
-### Принятые решения
+## 1. Учебные заведения
 
-1. **Двухколоночный layout** — сайдбар 280px + контент 1fr для desktop, одноколоночный для mobile (≤1100px)
-2. **CSS Modules + CSS Custom Properties** — все стили в base.css и globals.css, компоненты используют CSS-переменные из :root
-3. **SQLite через sqlite3** — Promise-обёртка для async/await совместимости, WAL mode для производительности
-4. **JWT в httpOnly cookie** — безопасная аутентификация без localStorage
-5. **Express-validator** — обязательная валидация всех POST/PUT запросов
+### Что сделано
+Добавлена возможность привязывать к профессиям учебные заведения Кировской области (вузы, колледжи, техникумы).
 
-## Выполненные шаги
+### Backend
+- **Новая таблица `educational_institutions`** — название, тип (вуз/колледж/техникум), сайт
+- **Новая таблица `profession_educational_institutions`** — связь многие-ко-многим между профессиями и заведениями
+- **Маршрут** `GET /api/professions/:id/educational-institutions` — получение заведений по профессии (без аутентификации)
+- **Admin-маршруты:**
+  - `GET /api/admin/educational-institutions` — список всех заведений
+  - `POST /api/admin/educational-institutions` — создание
+  - `DELETE /api/admin/educational-institutions/:id` — удаление
+  - `POST /api/admin/professions/:id/institutions` — привязка к профессии
+  - `DELETE /api/admin/professions/:id/institutions/:instId` — отвязка
 
-### Шаг 1 — Структура проекта и конфигурация
-- Создана структура `/home/user/zavodych/` с client/ и server/
-- Настроены package.json для корневого проекта, client и server
-- vite.config.js с проксированием /api на localhost:3001
-- .env с переменными окружения
+### Frontend
+- На странице профессии появился блок **«Обучение на специальность в Кировской области»** со списком заведений
+- Если у заведения есть сайт — название является ссылкой
+- Рядом с каждым заведением отображается его тип (вуз/колледж/техникум)
+- Если данных нет — выводится заглушка
 
-### Шаг 2 — База данных
-- schema.sql: 8 таблиц (users, professions, enterprises, slots, bookings, qr_codes, ai_chat_history)
-- db/index.js: sqlite3 с Promise-обёртками (runAsync, getAsync, allAsync)
-- seed.js: создание тестовых данных (7 пользователей, 12 профессий, 6 предприятий, 126 слотов)
+### Тестовые данные
+Добавлены 3 учебных заведения: ВятГУ, Кировский технологический колледж, Кировский авиационный техникум. Часть профессий уже привязана к заведениям.
 
-### Шаг 3 — Бэкенд API
-- auth routes: register, login, logout, confirm, me
-- professions routes: CRUD + get enterprises by profession
-- enterprises routes: CRUD + geo + slots + bookings
-- slots routes: delete
-- bookings routes: create, my, delete
-- qr routes: scan, generate
-- profile routes: get, update, visited
-- admin routes: users, block, stats
-- ai routes: chat, clear history
+---
 
-### Шаг 4 — Фронтенд
-- Layout с Sidebar (навигация) и MobileTop (мобильная шапка)
-- HomePage: Hero-блок, шаги, фичи, карточки предприятий
-- ProfessionsPage: поиск, фильтры, карточки
-- EnterpriseDetailPage: информация + слоты + запись
-- LoginPage, RegisterPage: авторизация с логотипом
-- BookingsPage: список записей со статусами
-- QRScannerPage: getUserMedia + jsQR
-- HelpPage: ИИ-чат с персонажем
-- MapPage: Яндекс.Карты (требует API-ключ)
-- EnterprisePanelPage: управление слотами
-- AdminPage: статистика, пользователи, блокировка
-- Компоненты: Toast, Sidebar, Layout, EnterpriseCard, ProfessionCard
+## 2. Вакансии и отклики
 
-### Шаг 5 — State Management
-- useAuthStore (Zustand): user, isLoading, checkAuth, login, register, logout, updateProfile
-- useToastStore (Zustand): toasts, addToast, removeToast, success, error, info
+### Что сделано
+Предприятия могут публиковать вакансии, а пользователи — откликаться на них.
 
-## API Reference
+### Backend
+- **Новая таблица `vacancies`** — привязка к предприятию и профессии, количество мест
+- **Новая таблица `vacancy_applications`** — отклики пользователей (с защитой от дублей через UNIQUE)
+- **Новый файл** `server/controllers/vacanciesController.js` — вся логика работы с вакансиями
+- **Новый файл** `server/routes/vacancies.js` — маршруты:
+  - `POST /api/vacancies/:vacancyId/apply` — откликнуться (auth)
+  - `DELETE /api/vacancies/:vacancyId` — удалить (enterprise/admin)
+- **Дополнены маршруты предприятий:**
+  - `GET /api/enterprises/:id/vacancies` — список вакансий предприятия
+  - `GET /api/enterprises/:id/applications` — отклики на вакансии (enterprise/admin)
+  - `POST /api/enterprises/:id/vacancies` — создать вакансию
+- **Профиль пользователя:**
+  - `GET /api/profile/applications` — мои отклики
+  - `DELETE /api/profile/applications/:applicationId` — отменить отклик
 
-| Метод | URL | Роль | Описание | Статус |
-|-------|-----|------|----------|--------|
-| POST | /api/auth/register | - | Регистрация | ✅ |
-| POST | /api/auth/login | - | Вход | ✅ |
-| POST | /api/auth/logout | - | Выход | ✅ |
-| GET | /api/auth/me | user | Текущий пользователь | ✅ |
-| GET | /api/professions | - | Список профессий | ✅ |
-| GET | /api/professions/:id | - | Профессия | ✅ |
-| GET | /api/professions/:id/enterprises | - | Предприятия с профессией | ✅ |
-| GET | /api/enterprises | - | Список предприятий | ✅ |
-| GET | /api/enterprises/geo | - | Координаты для карты | ✅ |
-| GET | /api/enterprises/:id | - | Предприятие | ✅ |
-| GET | /api/enterprises/:id/slots | - | Слоты предприятия | ✅ |
-| GET | /api/enterprises/:id/bookings | enterprise,admin | Записи предприятия | ✅ |
-| POST | /api/enterprises/:id/slots | enterprise,admin | Создать слот | ✅ |
-| GET | /api/slots/:slotId | - | Слот | ✅ |
-| DELETE | /api/slots/:slotId | enterprise,admin | Удалить слот | ✅ |
-| POST | /api/bookings | user | Создать запись | ✅ |
-| GET | /api/bookings/my | user | Мои записи | ✅ |
-| DELETE | /api/bookings/:id | user,enterprise,admin | Отменить запись | ✅ |
-| POST | /api/qr/scan | user | Сканировать QR | ✅ |
-| GET | /api/qr/generate/:enterpriseId | enterprise,admin | QR-коды | ✅ |
-| GET | /api/profile | user | Профиль | ✅ |
-| PUT | /api/profile | user | Обновить профиль | ✅ |
-| GET | /api/profile/visited | user | Посещённые предприятия | ✅ |
-| GET | /api/admin/users | admin | Пользователи | ✅ |
-| PUT | /api/admin/users/:id/block | admin | Блокировка | ✅ |
-| GET | /api/admin/stats | admin | Статистика | ✅ |
-| POST | /api/ai/chat | user | Чат с ИИ | ✅ |
-| DELETE | /api/ai/chat/history | user | Очистить историю | ✅ |
+### Frontend
+- **Страница предприятия** — блок «Вакантные места для молодых специалистов» с кнопкой «Откликнуться». Если пользователь уже откликался — возвращается ошибка 409
+- **Страница «Мои отклики»** (`/applications`) — отдельная страница с возможностью отмены отклика
+- **Ссылка «Мои отклики»** — добавлена в боковое меню рядом с «Мои записи»
+- **Панель предприятия** — вкладки «Вакансии» (создание/удаление, выбор профессии из привязанных) и «Отклики» (просмотр откликов с ФИО, email, профессией)
+- **Профиль пользователя** — очищен от блока откликов (теперь только редактирование профиля)
 
-## Переменные окружения
+### Тестовые данные
+Созданы вакансии для Лаванды (лаборант — 2 места, биотехнолог — 1), ЛеПласта (инженер-технолог — 3, оператор ЧПУ — 5), КЭМЗа (сварщик — 2).
 
-| Переменная | Описание | Пример |
-|-----------|----------|--------|
-| JWT_SECRET | Секретный ключ для JWT | your_secret_here |
-| DB_PATH | Путь к SQLite | ./server/db/zavodych.db |
-| SMTP_HOST | SMTP-хост | smtp.mailtrap.io |
-| SMTP_PORT | SMTP-порт | 587 |
-| SMTP_USER | SMTP-логин | your_user |
-| SMTP_PASS | SMTP-пароль | your_pass |
-| AI_API_KEY | Ключ OpenAI | your_key |
-| AI_API_URL | URL OpenAI API | https://api.openai.com/v1/chat/completions |
-| YMAPS_API_KEY | Ключ Яндекс.Карт | your_yandex_maps_api_key |
-| PORT | Порт сервера | 3001 |
-| CLIENT_URL | URL клиента | http://localhost:5173 |
+---
 
-## Как запустить проект
+## 3. VK Оповещения
 
-### Установка зависимостей
-```bash
-cd /home/user/zavodych
-npm install
-cd client && npm install
-cd ../server && npm install
-```
+### Что сделано
+При наступлении определённых событий на портале администратору приходит личное сообщение ВКонтакте.
 
-### Инициализация базы данных
-```bash
-cd /home/user/zavodych/server
-node db/seed.js
-```
+### Архитектура
+- **`server/utils/vkCreds.js`** — чтение/запись `server/vk-cred.json` (ID администратора, токен, флаги событий)
+- **`server/utils/vkNotify.js`** — универсальная функция `sendVkNotification(eventType, data)`:
+  - Проверяет, включено ли оповещение для данного типа события
+  - Формирует разное сообщение для каждого события
+  - Отправляет через VK API `messages.send`
+  - Ошибки логирует через Winston, не блокирует основной ответ
 
-### Запуск dev-серверов
-```bash
-# Backend (в одном терминале)
-cd /home/user/zavodych/server
-node index.js
+### События
+1. **Новый отклик на вакансию** (`new_application`) — ФИО, предприятие, профессия, дата
+2. **Новый пользователь** (`new_user`) — email, имя, дата регистрации
+3. **Новая запись на экскурсию** (`new_booking`) — пользователь, предприятие, дата, время
 
-# Frontend (в другом терминале)
-cd /home/user/zavodych/client
-npm run dev
-```
+### Настройки в админке
+- Вкладка «Оповещения ВК» в админ-панели
+- Поля: ID администратора, токен сообщества
+- Чекбоксы для каждого события (вкл/выкл)
+- Данные сохраняются в `server/vk-cred.json`
 
-Или запуск обоих через concurrently:
-```bash
-cd /home/user/zavodych
-npm run dev
-```
+### Исправление
+Токен и ID берутся из `vk-cred.json`.
 
-### Тестовые аккаунты
+---
 
-| Роль | Email | Пароль |
-|------|-------|--------|
-| admin | admin@zavodych.ru | Admin123! |
-| enterprise | lavanda@zavodych.ru | Lavanda456! |
-| enterprise | leplast@zavodych.ru | Leplast321! |
-| user | school1@test.ru | Test1234! |
-| user | student1@test.ru | Test1234! |
-| user | parent1@test.ru | Test1234! |
+## 4. AI Ассистент
 
-## Известные проблемы и TODO
+### Что сделано
+В контекст AI-ассистента добавлена информация о вакансиях и откликах текущего пользователя.
 
-1. **Яндекс.Карты** — требуется реальный API-ключ для работы карты
-2. **AI Chat** — работает fallback-режим без API-ключа
-3. **QR Scanner** — требует HTTPS или localhost для getUserMedia
-4. **Images** — assets/logo.jpg и assets/person.jpg должны быть скопированы в client/public/assets/
+### Изменения в `server/utils/aiChat.js`
+Системный промпт теперь содержит:
+- Список профессий (30 шт.)
+- Список предприятий (30 шт.)
+- Данные текущего пользователя (имя, email, роль)
+- Бронирования пользователя
+- **Отклики на вакансии пользователя** — предприятие, профессия, дата отклика
 
-## Технический стек
+---
 
-- **Frontend**: React 18, Vite 5, React Router v6, Zustand, Lucide React, jsQR
-- **Backend**: Node.js 20, Express 4, SQLite3, bcrypt, jsonwebtoken, nodemailer, qrcode
-- **Styling**: CSS Modules + CSS Custom Properties (Mobile First, 320px-2560px)
+## 5. Чат-виджет
+
+### Что сделано
+Мобильный вид окна чата переработан для полноэкранного режима.
+
+### Изменения
+- CSS-классы вынесены в `base.css` вместо inline-стилей
+- Кнопка закрытия `ChevronDown` в шапке окна
+- **На мобильных (до 720px):**
+  - Окно открывается на весь экран (`inset: 0`)
+  - Круглая кнопка FAB скрывается, когда чат открыт
+  - Кнопка «Отправить» не растягивается на всю ширину
+  - Добавлены safe-area-inset для iPhone
+
+---
+
+## 6. Технические исправления
+
+### Прочее
+- Исправлен импорт `MessageSquare` в AdminPage (ошибка ReferenceError)
+- Исправлен импорт `X` в ProfilePage (ошибка ReferenceError)
+- Очищены `.env` и `.env.example` от неиспользуемых переменных (DB_PATH, SMTP, AI_API, YMAPS_API_KEY)
+- Расширена статистика админки (добавлены vacancies, applications)
+- Маршрут отмены отклика защищён проверкой владельца
