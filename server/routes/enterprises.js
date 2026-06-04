@@ -72,6 +72,28 @@ router.post(
   enterprisesController.createSlot
 );
 
+// Link profession to enterprise
+router.post(
+  '/:id/professions',
+  authenticate,
+  requireRole('enterprise', 'admin'),
+  requireNotBlocked,
+  [
+    body('profession_id').isInt().withMessage('ID профессии обязателен')
+  ],
+  handleValidationErrors,
+  enterprisesController.linkProfession
+);
+
+// Unlink profession from enterprise
+router.delete(
+  '/:id/professions/:professionId',
+  authenticate,
+  requireRole('enterprise', 'admin'),
+  requireNotBlocked,
+  enterprisesController.unlinkProfession
+);
+
 // Create vacancy for enterprise
 router.post(
   '/:id/vacancies',

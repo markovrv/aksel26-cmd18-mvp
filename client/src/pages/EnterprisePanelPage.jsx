@@ -1,6 +1,6 @@
 // === Enterprise Panel Page ===
-import React, { useState, useEffect } from 'react';
-import { Calendar, Users, Plus, Trash2, Building2, Edit3, X, Briefcase, List } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Calendar, Users, Plus, Trash2, Building2, Edit3, X, Briefcase, List, Link2, Unlink } from 'lucide-react';
 import { api } from '../api/client';
 import { useToastStore } from '../store/useToastStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -28,6 +28,11 @@ export function EnterprisePanelPage() {
   const [newSlot, setNewSlot] = useState({ date: '', time: '', max_participants: 10 });
   const [showAddVacancy, setShowAddVacancy] = useState(false);
   const [newVacancy, setNewVacancy] = useState({ profession_id: '', available_slots: 1 });
+
+  // Link profession state
+  const [showLinkProfession, setShowLinkProfession] = useState(false);
+  const [linkProfessionId, setLinkProfessionId] = useState('');
+  const [allProfessions, setAllProfessions] = useState([]);
 
   // Modal state for editing enterprise
   const [showEditModal, setShowEditModal] = useState(false);
@@ -121,6 +126,45 @@ export function EnterprisePanelPage() {
       loadData();
     } catch (err) {
       error(err.message || 'Ошибка при удалении');
+    }
+  };
+
+  // Load all professions for linking
+  const loadAllProfessions = async () => {
+    try {
+      const data = await api.get('/professions?limit=500');
+      setAllProfessions(data.data);
+    } catch (err) {
+      console.error('Failed to load professions:', err);
+    }
+  };
+
+  const handleLinkProfession = async () => {
+    if (!linkProfessionId) {
+      error('Выберите профессию');
+      return;
+    }
+    try {
+      await api.post(`/enterprises/${enterprise.id}/professions`, {
+        profession_id: parseInt(linkProfessionId)
+      });
+      success('Профессия привязана к предприятию');
+      setLinkProfessionId('');
+      setShowLinkProfession(false);
+      loadData();
+    } catch (err) {
+      error(err.message || 'Ошибка при привязке');
+    }
+  };
+
+  const handleUnlinkProfession = async (professionId, title) => {
+    if (!window.confirm(`Отвязать профессию "${title}" от предприятия?`)) return;
+    try {
+      await api.delete(`/enterprises/${enterprise.id}/professions/${professionId}`);
+      success('Профессия отвязана');
+      loadData();
+    } catch (err) {
+      error(err.message || 'Ошибка при отвязке');
     }
   };
 
@@ -334,11 +378,74 @@ export function EnterprisePanelPage() {
         <div className="section" style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <h2 style={{ margin: 0 }}>Вакансии предприятия</h2>
-            <button className="btn primary small" onClick={() => setShowAddVacancy(!showAddVacancy)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Plus size={16} />
-              Добавить вакансию
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn secondary small"
+                onClick={() => { setShowLinkProfession(!showLinkProfession); if (!showLinkProfession) loadAllProfessions(); }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                <Link2 size={16} />
+                {showLinkProfession ? 'Отмена' : 'Привязать профессию'}
+              </button>
+              <button className="btn primary small" onClick={() => setShowAddVacancy(!showAddVacancy)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Plus size={16} />
+                Добавить вакансию
+              </button>
+            </div>
           </div>
+
+          {/* Link profession form */}
+          {showLinkProfession && (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr auto',
+              gap: 12,
+              padding: 16,
+              background: 'var(--surface2)',
+              borderRadius: 14,
+              marginBottom: 16,
+              alignItems: 'end'
+            }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: 'var(--muted)' }}>Выберите профессию</label>
+                <select
+                  value={linkProfessionId}
+                  onChange={(e) => setLinkProfessionId(e.target.value)}
+                  className="select"
+                  style={{ width: '100%' }}
+                >
+                  <option value="">— Выберите профессию —</option>
+                  {allProfessions
+                    .filter(p => !linkedProfessions.some(lp => lp.id === p.id))
+                    .map(p => (
+                      <option key={p.id} value={p.id}>{p.title}</option>
+                    ))}
+                </select>
+              </div>
+              <button className="btn primary" onClick={handleLinkProfession}>Привязать</button>
+            </div>
+          )}
+
+          {/* Linked professions list */}
+          {linkedProfessions.length > 0 && (
+            <div style={{ marginBottom: 16, padding: 12, background: 'var(--surface2)', borderRadius: 14 }}>
+              <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 8 }}>Привязанные профессии:</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {linkedProfessions.map(p => (
+                  <span
+                    key={p.id}
+                    className="chip"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+                    onClick={() => handleUnlinkProfession(p.id, p.title)}
+                    title={`Отвязать "${p.title}"`}
+                  >
+                    {p.title}
+                    <Unlink size={12} />
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {showAddVacancy && (
             <div style={{

@@ -55,3 +55,6 @@ uploads/*
 package-lock.json
 
 *.pdf
+
+scripts
+fetched-data

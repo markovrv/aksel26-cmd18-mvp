@@ -205,6 +205,45 @@ export async function createSlot(req, res) {
   }
 }
 
+// === Link Profession to Enterprise ===
+export async function linkProfession(req, res) {
+  try {
+    const { id } = req.params;
+    const { profession_id } = req.body;
+
+    if (!profession_id) {
+      return res.status(400).json({ message: 'ID профессии обязателен' });
+    }
+
+    await db.runAsync(
+      'INSERT OR IGNORE INTO enterprise_professions (enterprise_id, profession_id) VALUES (?, ?)',
+      [id, profession_id]
+    );
+
+    res.json({ message: 'Профессия привязана к предприятию' });
+  } catch (err) {
+    console.error('LinkProfession error:', err);
+    res.status(500).json({ message: 'Ошибка при привязке профессии' });
+  }
+}
+
+// === Unlink Profession from Enterprise ===
+export async function unlinkProfession(req, res) {
+  try {
+    const { id, professionId } = req.params;
+
+    await db.runAsync(
+      'DELETE FROM enterprise_professions WHERE enterprise_id = ? AND profession_id = ?',
+      [id, professionId]
+    );
+
+    res.json({ message: 'Профессия отвязана от предприятия' });
+  } catch (err) {
+    console.error('UnlinkProfession error:', err);
+    res.status(500).json({ message: 'Ошибка при отвязке профессии' });
+  }
+}
+
 // === Get Enterprise Bookings ===
 export async function getEnterpriseBookings(req, res) {
   try {

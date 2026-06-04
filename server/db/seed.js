@@ -44,32 +44,35 @@ async function seed() {
     await db.runAsync('DELETE FROM users');
 
     // === Create Users ===
-    // Admin
     const adminHash = await bcrypt.hash('Admin123!', saltRounds);
-    const adminResult = await db.runAsync(
-      `INSERT INTO users (email, password_hash, name, role, is_confirmed, is_blocked) VALUES (?, ?, ?, ?, ?, ?)`,
-      ['admin@zavodych.ru', adminHash, 'Александр Петров', 'admin', 1, 0]
-    );
-    console.log('Admin created:', adminResult.lastID);
-
-    // Enterprise users
     const lavandaHash = await bcrypt.hash('Lavanda456!', saltRounds);
     const leplastHash = await bcrypt.hash('Leplast321!', saltRounds);
+    const userHash = await bcrypt.hash('Test1234!', saltRounds);
+    const mayakHash = await bcrypt.hash('Mayak789!', saltRounds);
 
-    const lavandaResult = await db.runAsync(
+    // Admin — Никита Подлевских (как на prod)
+    await db.runAsync(
+      `INSERT INTO users (email, password_hash, name, role, is_confirmed, is_blocked) VALUES (?, ?, ?, ?, ?, ?)`,
+      ['admin@zavodych.ru', adminHash, 'Никита Подлевских', 'admin', 1, 0]
+    );
+
+    // Enterprise users
+    await db.runAsync(
       `INSERT INTO users (email, password_hash, name, role, is_confirmed, is_blocked) VALUES (?, ?, ?, ?, ?, ?)`,
       ['lavanda@zavodych.ru', lavandaHash, 'Марина Сидорова', 'enterprise', 1, 0]
     );
-
-    const leplastResult = await db.runAsync(
+    await db.runAsync(
       `INSERT INTO users (email, password_hash, name, role, is_confirmed, is_blocked) VALUES (?, ?, ?, ?, ?, ?)`,
       ['leplast@zavodych.ru', leplastHash, 'Ольга Кузнецова', 'enterprise', 1, 0]
     );
-    console.log('Enterprise users created');
+    // Нанолек привязан к lavanda (user_id=2 на prod — Марина Сидорова)
+    // Маяк — отдельный enterprise пользователь
+    await db.runAsync(
+      `INSERT INTO users (email, password_hash, name, role, is_confirmed, is_blocked) VALUES (?, ?, ?, ?, ?, ?)`,
+      ['mayak@zavodych.ru', mayakHash, 'Маяк Маякович', 'enterprise', 1, 0]
+    );
 
     // Regular users
-    const userHash = await bcrypt.hash('Test1234!', saltRounds);
-
     await db.runAsync(
       `INSERT INTO users (email, password_hash, name, role, is_confirmed, is_blocked) VALUES (?, ?, ?, ?, ?, ?)`,
       ['school1@test.ru', userHash, 'Никита Смирнов', 'user', 1, 0]
@@ -86,75 +89,110 @@ async function seed() {
       `INSERT INTO users (email, password_hash, name, role, is_confirmed, is_blocked) VALUES (?, ?, ?, ?, ?, ?)`,
       ['blocked@test.ru', userHash, 'Иван Тестов', 'user', 1, 1]
     );
-    console.log('Regular users created');
+    console.log('Users created: 4 enterprise + 4 regular + admin');
 
-    // === Create Professions ===
+    // === Create Professions (с image_url и video_url как на prod) ===
     const professions = [
-      { title: 'Инженер-технолог', description: 'Разрабатывает и внедряет технологические процессы производства', industry: 'Производство' },
-      { title: 'Оператор станков с ЧПУ', description: 'Управляет автоматизированным оборудованием', industry: 'Производство' },
-      { title: 'Сварщик', description: 'Соединяет металлические конструкции различными способами', industry: 'Производство' },
-      { title: 'Электромонтажник', description: 'Монтирует и обслуживает электрические сети и оборудование', industry: 'Энергетика' },
-      { title: 'Лаборант химического анализа', description: 'Проводит исследования и анализы в лаборатории', industry: 'Химическая' },
-      { title: 'Биотехнолог', description: 'Разрабатывает биологические продукты и технологии', industry: 'Биотехнологии' },
-      { title: 'Программист АСУ ТП', description: 'Настраивает системы автоматизированного управления', industry: 'IT' },
-      { title: 'Менеджер по продажам', description: 'Работает с клиентами и заключает сделки', industry: 'Торговля' },
-      { title: 'Маркетолог', description: 'Разрабатывает стратегии продвижения продукции', industry: 'Маркетинг' },
-      { title: 'Бухгалтер', description: 'Ведёт финансовый учёт и отчётность', industry: 'Финансы' },
-      { title: 'Логист', description: 'Организует грузоперевозки и складскую логистику', industry: 'Логистика' },
-      { title: 'Эколог', description: 'Контролирует соблюдение экологических норм', industry: 'Экология' }
+      {
+        title: 'Инженер-технолог',
+        description: 'Разрабатывает и внедряет технологические процессы производства',
+        industry: 'Производство',
+        video_url: '',
+        image_url: 'https://sun9-10.userapi.com/s/v1/ig2/daaR2AvnniyIE6WWBVvAzeI5TSsQoCp0ezzgS14A-n9CfNY5WfNsqans1i3CSgmsYQJUQgbxxYt-c1e-WO_fb5C2.jpg?quality=95&as=32x27,48x40,72x60,108x91,160x134,240x202,360x302,480x403,540x453,640x537,720x605,736x618&from=bu&cs=736x0'
+      },
+      {
+        title: 'Оператор станков с ЧПУ',
+        description: 'Управляет автоматизированным оборудованием',
+        industry: 'Производство',
+        video_url: '',
+        image_url: 'https://sun9-11.userapi.com/s/v1/ig2/1UsvzZzl9_k30kb1aGmSmFXuZ99tonlyKjC1Nd9KMYG_9h73gziXLleglN8vLJoiwaYb6IHM1mhgYbIinzq5nfyD.jpg?quality=95&as=32x32,48x48,72x72,108x108,160x160,240x240,360x360,480x480,540x540,640x640,720x720,736x736&from=bu&cs=736x0'
+      },
+      {
+        title: 'Сварщик',
+        description: 'Соединяет металлические конструкции различными способами',
+        industry: 'Производство',
+        video_url: '',
+        image_url: 'https://sun59-1.userapi.com/s/v1/ig2/BDbRZeF_gXpTu4z1fccQHWDNoRDV_GIavdPoLkwskDD18WaY1yUhT28SEVp1LSuUsgXf6GrzOhOHot0ER5t471Xi.jpg?quality=95&as=32x32,48x48,72x72,108x108,160x160,240x240,360x360,480x480,512x512&from=bu&cs=512x0'
+      },
+      {
+        title: 'Электромонтажник',
+        description: 'Монтирует и обслуживает электрические сети и оборудование',
+        industry: 'Энергетика',
+        video_url: '',
+        image_url: 'https://sun9-85.userapi.com/s/v1/ig2/P42QBsUD0BZGg_0hvNLCMpO13yF_dVxAON2kCdQnS-qLbaPDcmtcM7tAd1AYdqPLx41UheDrQ54X0q_X77Tvs_mp.jpg?quality=95&as=32x31,48x47,72x71,108x106,160x157,240x236,360x354,480x472,540x531,615x605&from=bu&cs=615x0'
+      },
+      {
+        title: 'Лаборант химического анализа',
+        description: 'Проводит исследования и анализы в лаборатории',
+        industry: 'Химическая',
+        video_url: '',
+        image_url: 'https://sun9-57.userapi.com/s/v1/ig2/45C1zn7Mbof3VqgZyv4fWVo45vw6-ffRxfWq7bC0AxjAyeTYX8jGmr8g1TsdVQQRwXz1-7F3GmHhaywHTNTaSJLE.jpg?quality=95&as=32x18,48x26,72x40,108x59,160x88,240x132,360x198,480x264,540x297,640x352,720x396,735x404&from=bu&cs=735x0'
+      },
+      {
+        title: 'Биотехнолог',
+        description: 'Разрабатывает биологические продукты и технологии',
+        industry: 'Биотехнологии',
+        video_url: 'https://vkvideo.ru/video_ext.php?oid=-238878105&id=456239017&hash=333a2589a275c36e&hd=3',
+        image_url: 'https://sun9-27.userapi.com/s/v1/ig2/SV7vBQRBIfYlkRThEbWMSFVJdiapMNjH-LxuO7xPguIOE3RpadDuXLYkeelEWPF-WX-zH1LssbUPZbX4UzNy1kgB.jpg?quality=95&as=32x27,48x40,72x60,108x90,160x133,240x200,360x300,480x399,540x449,626x521&from=bu&cs=626x0'
+      },
+      {
+        title: 'Программист АСУ ТП',
+        description: 'Настраивает системы автоматизированного управления',
+        industry: 'IT',
+        video_url: '',
+        image_url: 'https://sun59-2.userapi.com/s/v1/ig2/cfK3lDIC36kCqNi5u1rTy4IarXvuIVd4Mrvm8ssBVGMU5NroUmRkidxdVYahFxXcUu-xT-PsP7zBQ_AzpEhaY7No.jpg?quality=95&as=32x32,48x48,72x72,108x108,160x160,240x240,360x360,480x480,540x540,640x640,720x720,736x736&from=bu&cs=736x0'
+      },
+      {
+        title: 'Менеджер по продажам',
+        description: 'Работает с клиентами и заключает сделки',
+        industry: 'Торговля',
+        video_url: '',
+        image_url: 'https://sun9-20.userapi.com/s/v1/ig2/h_5HI6iHbFqLAR0SEpMx-W0DdIRC497u8I6oq8qQ1Sbz2c0cNgplUebhMCiuK1AQsP61cDc4tWuCs9PR6SVtdy98.jpg?quality=95&as=32x32,48x48,72x72,108x108,160x160,240x240,360x360,480x480,540x540,640x640,720x720,736x736&from=bu&cs=736x0'
+      },
+      {
+        title: 'Маркетолог',
+        description: 'Разрабатывает стратегии продвижения продукции',
+        industry: 'Маркетинг',
+        video_url: '',
+        image_url: 'https://sun9-79.userapi.com/s/v1/ig2/Yf1hPG_MZRBh0pIy45PiQa-vN6UJZnYkfnBM9VZ09Fek7OixNf42ktDQLaQRiQelz_YUvHdmPkiwIboDOnLRJFX2.jpg?quality=95&as=32x31,48x47,72x70,108x105,160x155,240x233,360x349,480x465,540x524,557x540&from=bu&cs=557x0'
+      },
+      {
+        title: 'Бухгалтер',
+        description: 'Ведёт финансовый учёт и отчётность',
+        industry: 'Финансы',
+        video_url: '',
+        image_url: 'https://sun9-79.userapi.com/s/v1/ig2/83lr6ojhkOXQ-jNkRUBAI5wm_OTZSXXhJtdMa-bEvq9avPVkpSvu2U_geRVgQLPMKKiZ2f64FLnKQp6WZPK_isOQ.jpg?quality=95&as=32x19,48x29,72x44,108x65,160x97,240x145,360x218,480x290,540x326,640x387,720x435,736x445&from=bu&cs=736x0'
+      },
+      {
+        title: 'Логист',
+        description: 'Организует грузоперевозки и складскую логистику',
+        industry: 'Логистика',
+        video_url: '',
+        image_url: 'https://sun59-1.userapi.com/s/v1/ig2/hNrwOlLR86c1iaFxYrrGJkU2iWE7y2hJY-X2V52ZoHG2rN-X_fFETayekVmJxrhTuMl_UyBSlez1fXgCrxpvvPCG.jpg?quality=95&as=32x18,48x27,72x40,108x61,160x90,240x135,360x202,480x270,540x304,640x360,720x405,736x414&from=bu&cs=736x0'
+      },
+      {
+        title: 'Эколог',
+        description: 'Контролирует соблюдение экологических норм',
+        industry: 'Экология',
+        video_url: '',
+        image_url: 'https://sun9-78.userapi.com/s/v1/ig2/jlV5-Y3Ci49ClOddMfIUOz_FULaTJORd6JIpt5IERHL6HfCScMDLufZ6_JkkOJwI7HWfd7_FN9nMtpQI_-PU1Eyg.jpg?quality=95&as=32x21,48x32,72x48,108x72,160x107,240x160,360x240,480x320,540x360,640x427,720x480,735x490&from=bu&cs=735x0'
+      }
     ];
 
     const professionIds = [];
     for (const p of professions) {
       const result = await db.runAsync(
-        'INSERT INTO professions (title, description, industry) VALUES (?, ?, ?)',
-        [p.title, p.description, p.industry]
+        'INSERT INTO professions (title, description, industry, video_url, image_url) VALUES (?, ?, ?, ?, ?)',
+        [p.title, p.description, p.industry, p.video_url, p.image_url]
       );
       professionIds.push(result.lastID);
     }
     console.log('Professions created:', professionIds.length);
 
-    // === Create Enterprises ===
+    // === Create Enterprises (как на prod, но без мусорного "паивм") ===
+    // На prod 8 предприятий. Пропускаем id=8 (паивм — тестовый мусор).
+    // Создаём 7 нормальных предприятий.
     const enterprises = [
-      {
-        name: 'Лаванда',
-        description: 'Производство косметической продукции на основе натуральных компонентов. Современное оборудование, дружный коллектив, возможности для профессионального роста.',
-        industry: 'Косметика',
-        city: 'Киров',
-        address: 'ул. Промышленная, 15',
-        phone: '+7 (8332) 12-34-56',
-        website: 'https://lavanda-kirov.ru',
-        latitude: 58.5966,
-        longitude: 49.6601,
-        user_id: lavandaResult.lastID,
-        professions: [5, 6, 11] // lab, biotech, ecol
-      },
-      {
-        name: 'ЛеПласт',
-        description: 'Производство пластиковых изделий и упаковки. Инновационные технологии литья, собственный конструкторский отдел.',
-        industry: 'Пластик',
-        city: 'Киров',
-        address: 'Октябрьский пр., 88',
-        phone: '+7 (8332) 98-76-54',
-        website: 'https://leplast.ru',
-        latitude: 58.6038,
-        longitude: 49.6750,
-        user_id: leplastResult.lastID,
-        professions: [1, 2, 7] // engineer, CNC, programmer
-      },
-      {
-        name: 'Кировский электромашиностроительный завод',
-        description: 'Производство электродвигателей и генераторов для промышленности и транспорта. Более 50 лет опыта.',
-        industry: 'Машиностроение',
-        city: 'Киров',
-        address: 'ул. Щорса, 54',
-        phone: '+7 (8332) 45-67-89',
-        website: 'https://kemz.ru',
-        latitude: 58.5820,
-        longitude: 49.6450,
-        user_id: null,
-        professions: [1, 3, 4] // engineer, welder, electrician
-      },
       {
         name: 'АгроФьюжн',
         description: 'Производство продуктов питания из местного сырья. Современные технологии переработки и хранения.',
@@ -163,10 +201,11 @@ async function seed() {
         address: 'ул. Промышленная, 7',
         phone: '+7 (8332) 77-88-99',
         website: 'https://agrofusion.ru',
-        latitude: 58.5530,
-        longitude: 50.0350,
+        photo_url: null,
+        latitude: 58.553,
+        longitude: 50.035,
         user_id: null,
-        professions: [1, 10, 11] // engineer, logistics, ecol
+        professions: [1, 10, 11] // Инженер-технолог, Бухгалтер, Логист
       },
       {
         name: 'ВяткаТелеком',
@@ -176,10 +215,39 @@ async function seed() {
         address: 'ул. Ленина, 100',
         phone: '+7 (8332) 55-44-33',
         website: 'https://vyatkacom.ru',
+        photo_url: null,
         latitude: 58.5885,
-        longitude: 49.6820,
+        longitude: 49.682,
         user_id: null,
-        professions: [7, 8, 9] // programmer, sales, marketing
+        professions: [7, 8, 9] // Программист, Менеджер, Маркетолог
+      },
+      {
+        name: 'Кировский электромашиностроительный завод',
+        description: 'Производство электродвигателей и генераторов для промышленности и транспорта. Более 50 лет опыта.',
+        industry: 'Машиностроение',
+        city: 'Киров',
+        address: 'ул. Щорса, 54',
+        phone: '+7 (8332) 45-67-89',
+        website: 'https://kemz.ru',
+        photo_url: null,
+        latitude: 58.582,
+        longitude: 49.645,
+        user_id: null,
+        professions: [1, 3, 4] // Инженер, Сварщик, Электромонтажник
+      },
+      {
+        name: 'ЛеПласт',
+        description: 'Производство пластиковых изделий и упаковки. Инновационные технологии литья, собственный конструкторский отдел.',
+        industry: 'Пластик',
+        city: 'Киров',
+        address: 'Октябрьский пр., 88',
+        phone: '+7 (8332) 98-76-54',
+        website: 'https://leplast.ru',
+        photo_url: null,
+        latitude: 58.6038,
+        longitude: 49.675,
+        user_id: 3, // Ольга Кузнецова (leplast@)
+        professions: [1, 2, 7] // Инженер, Оператор ЧПУ, Программист
       },
       {
         name: 'МеталлПро',
@@ -189,24 +257,54 @@ async function seed() {
         address: 'ул. Индустриальная, 22',
         phone: '+7 (8332) 66-77-88',
         website: 'https://metallpro-kirov.ru',
-        latitude: 58.7310,
-        longitude: 50.1680,
+        photo_url: null,
+        latitude: 58.731,
+        longitude: 50.168,
         user_id: null,
-        professions: [1, 2, 3] // engineer, CNC, welder
+        professions: [1, 2, 3] // Инженер, Оператор ЧПУ, Сварщик
+      },
+      {
+        name: 'ООО «Нанолек»',
+        description: 'Российская биофармацевтическая компания, основанная в 2011 году; её производственный комплекс расположен в пгт Лёвинцы (Кировская область). Компания занимается разработкой и производством вакцин (в т.ч. первой российской вакцины против ВПЧ) и биотехнологических препаратов, с 2020 года входит в перечень системообразующих предприятий РФ.',
+        industry: 'Фармацевтическая промышленность',
+        city: 'Лёвинцы',
+        address: 'улица 70-летия Октября, 142.',
+        phone: '+7(83354)2-50-13',
+        website: 'https://nanolek.ru/ru/',
+        photo_url: 'https://sun9-46.userapi.com/s/v1/ig2/44pzwIxj_c4YPBoIEtFqMImaGTYv-4zwRli4FMW1mofNWTzjtK2b2gXPBTCpS3AMgVDfbw1Ka4ULx8Cv6qjEMZWT.jpg?quality=95&as=32x18,48x27,72x40,108x61,160x90,240x135,360x202,480x270,540x303,640x360,720x405,1080x607,1280x719,1440x809,2141x1203&from=bu&cs=2141x0',
+        latitude: 58.520761673267074,
+        longitude: 49.46179674381612,
+        user_id: 2, // Марина Сидорова (lavanda@)
+        professions: [5, 6, 11] // Лаборант, Биотехнолог, Логист
+      },
+      {
+        name: 'ПАО «Кировский завод «Маяк»',
+        description: 'Машиностроительное предприятие в Кирове (основан в 1941 году), выпускающее военную технику и товары народного потребления. Награждён орденом Отечественной войны I степени и орденом Александра Невского.',
+        industry: 'Машиностроение',
+        city: 'Киров',
+        address: 'ул. Молодой Гвардии, д. 67',
+        phone: '+78332405299',
+        website: 'https://kzmayak.ru',
+        photo_url: 'https://sun9-11.userapi.com/s/v1/ig2/xzhym2jssg8W2kz0lyc6spshM5-E2BrlKM0F_sDCPttnOltsL-SFHK3chTwDh3STMIW6EmsfvaXyNIy-OSo7decm.jpg?quality=95&as=32x24,48x36,72x54,108x81,160x120,240x180,360x270,480x360,540x405,640x479,720x539,1080x809,1200x899&from=bu&u=Z5ear8BQX3GOgtaXDlAKoA9sShuUKx9QuFI0yw_b76c&cs=1200x0',
+        latitude: 58.59875796692679,
+        longitude: 49.65576264781492,
+        user_id: 4, // Маяк Маякович (mayak@)
+        professions: []
       }
     ];
 
     const enterpriseIds = [];
     for (const e of enterprises) {
       const result = await db.runAsync(
-        `INSERT INTO enterprises (name, description, industry, city, address, phone, website, latitude, longitude, user_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [e.name, e.description, e.industry, e.city, e.address, e.phone, e.website, e.latitude, e.longitude, e.user_id]
+        `INSERT INTO enterprises (name, description, industry, city, address, phone, website, photo_url, latitude, longitude, user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [e.name, e.description, e.industry, e.city, e.address, e.phone, e.website, e.photo_url, e.latitude, e.longitude, e.user_id]
       );
       enterpriseIds.push(result.lastID);
 
       // Link professions
-      for (const profId of e.professions) {
+      for (const profIdx of e.professions) {
+        const profId = professionIds[profIdx - 1]; // 1-based index -> 0-based array
         await db.runAsync(
           'INSERT INTO enterprise_professions (enterprise_id, profession_id) VALUES (?, ?)',
           [result.lastID, profId]
@@ -251,11 +349,30 @@ async function seed() {
     }
     console.log('Slots created:', slots.length);
 
-    // === Create Educational Institutions ===
+    // === Create Educational Institutions (все 22 с prod) ===
     const institutions = [
+      { name: 'Волго-Вятский колледж информатики, финансов, права, управления', type: 'колледж', website: 'https://vvkifpu.ru' },
+      { name: 'Вятский автомобильно-промышленный колледж', type: 'колледж', website: 'http://vapk.info' },
+      { name: 'Вятский государственный агротехнологический университет', type: 'вуз', website: 'https://vgatu.ru' },
       { name: 'Вятский государственный университет', type: 'вуз', website: 'https://vyatsu.ru' },
-      { name: 'Кировский технологический колледж', type: 'колледж', website: 'https://ktk-kirov.ru' },
-      { name: 'Кировский авиационный техникум', type: 'техникум', website: 'https://kavt-kirov.ru' }
+      { name: 'Вятский гуманитарно-экономический колледж', type: 'колледж', website: 'https://www.vgek-kirov.ru' },
+      { name: 'Вятский колледж профессиональных технологий, управления и сервиса', type: 'колледж', website: 'http://vyatktuis.ru' },
+      { name: 'Вятский экономико-социальный колледж', type: 'колледж', website: 'https://vesk43.ru' },
+      { name: 'Вятский электромашиностроительный техникум', type: 'техникум', website: 'https://vemst.ru' },
+      { name: 'Вятско-Полянский механический техникум', type: 'техникум', website: 'https://www.vpmt.ru' },
+      { name: 'Кировский авиационный техникум', type: 'техникум', website: 'https://aviakat.ru' },
+      { name: 'Кировский автодорожный техникум', type: 'техникум', website: 'http://кгат.рф' },
+      { name: 'Кировский государственный медицинский университет', type: 'вуз', website: 'https://kirovgma.ru' },
+      { name: 'Кировский институт (филиал) Московского гуманитарно-экономического университета', type: 'вуз', website: 'https://mgeu-kirov.ru' },
+      { name: 'Кировский лесопромышленный колледж', type: 'колледж', website: 'https://kirovlpk.ru' },
+      { name: 'Кировский многопрофильный техникум', type: 'техникум', website: 'https://kmpt-kirov.gosuslugi.ru' },
+      { name: 'Кировский технологический колледж', type: 'колледж', website: 'https://ktc-kirov.ru' },
+      { name: 'Кировский технологический колледж пищевой промышленности', type: 'колледж', website: 'http://www.kpp.kirov.ru' },
+      { name: 'Кировский филиал «Московского финансово-юридического университета»', type: 'вуз', website: 'https://kirov.mfua.ru' },
+      { name: 'Кировский филиал «Санкт-Петербургского Гуманитарного университета профсоюзов»', type: 'вуз', website: 'https://spbgupkirov.ru' },
+      { name: 'Кировский филиал Российской академии народного хозяйства и государственной службы при Президенте Российской Федерации', type: 'вуз', website: 'https://krv.ranepa.ru' },
+      { name: 'Колледж «Топ Академия» (филиал Московского международного колледжа цифровых технологий «Академия ТОП»)', type: 'колледж', website: 'https://kir.top-academy.ru' },
+      { name: 'Орлово-Вятский колледж педагогики и профессиональных технологий', type: 'колледж', website: 'https://vk.com/club125256232' }
     ];
 
     const institutionIds = [];
@@ -268,46 +385,67 @@ async function seed() {
     }
     console.log('Educational institutions created:', institutionIds.length);
 
-    // Link some professions to institutions
-    // Инженер-технолог (1) -> ВятГУ, КАВТ
-    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [1, institutionIds[0]]);
-    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [1, institutionIds[2]]);
-    // Программист АСУ ТП (7) -> ВятГУ, КТК
-    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [7, institutionIds[0]]);
-    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [7, institutionIds[1]]);
-    // Лаборант (5) -> ВятГУ
-    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [5, institutionIds[0]]);
-    // Биотехнолог (6) -> ВятГУ
-    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [6, institutionIds[0]]);
-    // Электромонтажник (4) -> КАВТ
-    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [4, institutionIds[2]]);
-    // Сварщик (3) -> КТК
-    await db.runAsync('INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)', [3, institutionIds[1]]);
-    console.log('Profession-institution links created');
+    // === Link professions to institutions (как на prod) ===
+    // Маппинг profession_id -> массив institution_id (по названиям)
+    const instByName = {};
+    for (let i = 0; i < institutions.length; i++) {
+      instByName[institutions[i].name] = institutionIds[i];
+    }
+
+    const links = {
+      1: ['Вятский государственный университет', 'Кировский технологический колледж пищевой промышленности'],
+      2: ['Вятский автомобильно-промышленный колледж', 'Вятский электромашиностроительный техникум', 'Кировский авиационный техникум'],
+      3: ['Вятский автомобильно-промышленный колледж', 'Вятский электромашиностроительный техникум', 'Вятско-Полянский механический техникум', 'Кировский автодорожный техникум'],
+      4: ['Вятский электромашиностроительный техникум', 'Кировский многопрофильный техникум'],
+      5: ['Вятский автомобильно-промышленный колледж', 'Вятский государственный университет', 'Кировский авиационный техникум'],
+      6: ['Вятский государственный университет', 'Вятский колледж профессиональных технологий, управления и сервиса', 'Кировский государственный медицинский университет'],
+      7: ['Волго-Вятский колледж информатики, финансов, права, управления', 'Вятский государственный университет', 'Кировский авиационный техникум'],
+      8: ['Волго-Вятский колледж информатики, финансов, права, управления', 'Вятский государственный агротехнологический университет', 'Вятский государственный университет', 'Вятский колледж профессиональных технологий, управления и сервиса', 'Кировский технологический колледж', 'Кировский филиал «Московского финансово-юридического университета»', 'Кировский филиал Российской академии народного хозяйства и государственной службы при Президенте Российской Федерации'],
+      9: ['Вятский государственный университет', 'Вятский гуманитарно-экономический колледж', 'Кировский государственный медицинский университет', 'Кировский институт (филиал) Московского гуманитарно-экономического университета', 'Кировский филиал «Московского финансово-юридического университета»', 'Кировский филиал «Санкт-Петербургского Гуманитарного университета профсоюзов»', 'Колледж «Топ Академия» (филиал Московского международного колледжа цифровых технологий «Академия ТОП»)'],
+      10: ['Вятский государственный агротехнологический университет', 'Вятский государственный университет', 'Вятский гуманитарно-экономический колледж', 'Вятский экономико-социальный колледж', 'Кировский институт (филиал) Московского гуманитарно-экономического университета', 'Кировский лесопромышленный колледж', 'Орлово-Вятский колледж педагогики и профессиональных технологий'],
+      11: ['Вятский автомобильно-промышленный колледж', 'Вятский государственный агротехнологический университет', 'Вятский гуманитарно-экономический колледж', 'Кировский лесопромышленный колледж'],
+      12: ['Вятский государственный агротехнологический университет', 'Вятский государственный университет']
+    };
+
+    let linkCount = 0;
+    for (const [profIdx, instNames] of Object.entries(links)) {
+      const profId = professionIds[Number(profIdx) - 1]; // 1-based -> 0-based
+      for (const instName of instNames) {
+        const instId = instByName[instName];
+        if (instId) {
+          await db.runAsync(
+            'INSERT INTO profession_educational_institutions (profession_id, institution_id) VALUES (?, ?)',
+            [profId, instId]
+          );
+          linkCount++;
+        }
+      }
+    }
+    console.log('Profession-institution links created:', linkCount);
 
     // === Create Vacancies ===
-    // Лаванда: лаборант (5) - 2 места, биотехнолог (6) - 1 место
+    // Лаванда (Нанолек — id 6 в списке): лаборант (5) - 2 места, биотехнолог (6) - 1 место
     await db.runAsync(
       'INSERT INTO vacancies (enterprise_id, profession_id, available_slots) VALUES (?, ?, ?)',
-      [enterpriseIds[0], 5, 2]
+      [enterpriseIds[5], professionIds[4], 2] // Нанолек + Лаборант
     );
     await db.runAsync(
       'INSERT INTO vacancies (enterprise_id, profession_id, available_slots) VALUES (?, ?, ?)',
-      [enterpriseIds[0], 6, 1]
+      [enterpriseIds[5], professionIds[5], 1] // Нанолек + Биотехнолог
     );
-    // ЛеПласт: инженер-технолог (1) - 3 места, оператор ЧПУ (2) - 5 мест
+    // ЛеПласт (id 4 в списке): инженер-технолог (1) - 3 места, оператор ЧПУ (2) - 5 мест
     await db.runAsync(
       'INSERT INTO vacancies (enterprise_id, profession_id, available_slots) VALUES (?, ?, ?)',
-      [enterpriseIds[1], 1, 3]
+      [enterpriseIds[3], professionIds[0], 3] // ЛеПласт + Инженер
     );
     await db.runAsync(
       'INSERT INTO vacancies (enterprise_id, profession_id, available_slots) VALUES (?, ?, ?)',
-      [enterpriseIds[1], 2, 5]
+      [enterpriseIds[3], professionIds[1], 5] // ЛеПласт + Оператор ЧПУ
     );
-    // КЭМЗ: сварщик (3) - 2 места
+    // КЭМЗ (id 3 в списке): сварщик (3) - 2 места
     await db.runAsync(
       'INSERT INTO vacancies (enterprise_id, profession_id, available_slots) VALUES (?, ?, ?)',
-      [enterpriseIds[2], 3, 2]
+      [enterpriseIds[2], professionIds[2], 2] // КЭМЗ + Сварщик
     );
     console.log('Vacancies created');
 

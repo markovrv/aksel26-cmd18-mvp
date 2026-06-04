@@ -1,6 +1,6 @@
 // === Admin Page ===
 import React, { useState, useEffect } from 'react';
-import { Users, Building2, Briefcase, Calendar, Shield, Plus, Edit3, Trash2, X, Bot, GraduationCap, Download, MessageSquare } from 'lucide-react';
+import { Users, Building2, Briefcase, Calendar, Shield, Plus, Edit3, Trash2, X, Bot, GraduationCap, Download, MessageSquare, Link2, Unlink } from 'lucide-react';
 import { api } from '../api/client';
 import YandexMapSelector from '../components/YandexMapSelector';
 import { useToastStore } from '../store/useToastStore';
@@ -41,6 +41,11 @@ export function AdminPage() {
 
   // Institutions state
   const [institutions, setInstitutions] = useState([]);
+  // Enterprise profession linking state
+  const [enterpriseProfessionsLink, setEnterpriseProfessionsLink] = useState({ enterprise_id: '', profession_id: '' });
+  const [enterpriseProfessionsMap, setEnterpriseProfessionsMap] = useState({});
+  // Institution profession linking state
+  const [institutionProfessionsMap, setInstitutionProfessionsMap] = useState({});
   const [showInstModal, setShowInstModal] = useState(false);
   const [instForm, setInstForm] = useState({ name: '', type: 'колледж', website: '' });
   const [linkProfessionId, setLinkProfessionId] = useState('');
@@ -73,12 +78,104 @@ export function AdminPage() {
       loadVkCreds();
     }
     if (activeTab === 'institutions') {
-      loadInstitutions();
+      loadInstitutionsData();
     }
     if (activeTab === 'applications') {
       loadApplications();
     }
+    if (activeTab === 'enterprises') {
+      loadEnterpriseProfessionsMap();
+    }
   }, [activeTab]);
+
+  const loadEnterpriseProfessionsMap = async () => {
+    try {
+      const map = {};
+      for (const ent of enterprises) {
+        try {
+          const data = await api.get(`/enterprises/${ent.id}`);
+          map[ent.id] = data.professions || [];
+        } catch (err) {
+          map[ent.id] = [];
+        }
+      }
+      setEnterpriseProfessionsMap(map);
+    } catch (err) {
+      console.error('Failed to load enterprise professions:', err);
+    }
+  };
+
+  const handleLinkEnterpriseProfession = async () => {
+    const { enterprise_id, profession_id } = enterpriseProfessionsLink;
+    if (!enterprise_id || !profession_id) {
+      error('Выберите предприятие и профессию');
+      return;
+    }
+    try {
+      await api.post(`/enterprises/${enterprise_id}/professions`, {
+        profession_id: parseInt(profession_id)
+      });
+      success('Профессия привязана к предприятию');
+      setEnterpriseProfessionsLink({ enterprise_id: '', profession_id: '' });
+      loadEnterpriseProfessionsMap();
+    } catch (err) {
+      error(err.message || 'Ошибка при привязке');
+    }
+  };
+
+  const loadInstitutionProfessionsMap = async () => {
+    try {
+      const map = {};
+      for (const inst of institutions) {
+        try {
+          // Используем GET /api/admin/professions/:id/institutions - фактически нам нужно обратное
+          // Проще через GET /api/professions/:id/educational-institutions для каждой профессии найти заведения,
+          // но нам нужно наоборот - для каждого заведения найти профессии.
+          // Используем админский эндпоинт который уже возвращает profession_count
+          // Для детального списка профессий используем отдельный запрос
+          // к профессиям, привязанным к заведению - через профессии
+          const profsData = await api.get(`/professions?limit=500`);
+          const linked = [];
+          for (const prof of profsData.data) {
+            try {
+              const instData = await api.get(`/professions/${prof.id}/educational-institutions`);
+              if (instData.data.some(i => i.id === inst.id)) {
+                linked.push(prof);
+              }
+            } catch (e) { /* skip */ }
+          }
+          map[inst.id] = linked;
+        } catch (err) {
+          map[inst.id] = [];
+        }
+      }
+      setInstitutionProfessionsMap(map);
+    } catch (err) {
+      console.error('Failed to load institution professions:', err);
+    }
+  };
+
+  const handleUnlinkInstProfession = async (instId, profId, profTitle) => {
+    if (!window.confirm(`Отвязать профессию "${profTitle}" от учебного заведения?`)) return;
+    try {
+      await api.delete(`/admin/professions/${profId}/institutions/${instId}`);
+      success('Профессия отвязана');
+      loadInstitutionsData();
+    } catch (err) {
+      error(err.message || 'Ошибка при отвязке');
+    }
+  };
+
+  const handleUnlinkEnterpriseProfession = async (entId, profId, profTitle) => {
+    if (!window.confirm(`Отвязать профессию "${profTitle}" от предприятия?`)) return;
+    try {
+      await api.delete(`/enterprises/${entId}/professions/${profId}`);
+      success('Профессия отвязана');
+      loadEnterpriseProfessionsMap();
+    } catch (err) {
+      error(err.message || 'Ошибка при отвязке');
+    }
+  };
 
   const loadAiCreds = async () => {
     try {
@@ -159,6 +256,31 @@ export function AdminPage() {
     }
   };
 
+  const loadInstitutionsData = async () => {
+    try {
+      const data = await api.get('/admin/educational-institutions');
+      setInstitutions(data.data);
+      // After institutions are loaded, build profession map
+      const map = {};
+      const profsData = await api.get(`/professions?limit=500`);
+      for (const inst of data.data) {
+        const linked = [];
+        for (const prof of profsData.data) {
+          try {
+            const instData = await api.get(`/professions/${prof.id}/educational-institutions`);
+            if (instData.data.some(i => i.id === inst.id)) {
+              linked.push(prof);
+            }
+          } catch (e) { /* skip */ }
+        }
+        map[inst.id] = linked;
+      }
+      setInstitutionProfessionsMap(map);
+    } catch (err) {
+      console.error('Failed to load institutions:', err);
+    }
+  };
+
   const loadInstitutions = async () => {
     try {
       const data = await api.get('/admin/educational-institutions');
@@ -199,7 +321,7 @@ export function AdminPage() {
       success('Учебное заведение создано');
       setShowInstModal(false);
       setInstForm({ name: '', type: 'колледж', website: '' });
-      loadInstitutions();
+      loadInstitutionsData();
     } catch (err) {
       error(err.message || 'Ошибка при создании');
     }
@@ -226,7 +348,7 @@ export function AdminPage() {
         institution_id: parseInt(linkInstitutionId)
       });
       success('Заведение привязано к профессии');
-      loadInstitutions();
+      loadInstitutionsData();
     } catch (err) {
       error(err.message || 'Ошибка при привязке');
     }
@@ -582,45 +704,101 @@ export function AdminPage() {
                 </button>
               </div>
 
+              {/* Link profession to enterprise */}
+              <div style={{ padding: 16, background: 'var(--surface2)', borderRadius: 14, marginBottom: 16, display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, alignItems: 'end' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: 'var(--muted)' }}>Предприятие</label>
+                  <select
+                    value={enterpriseProfessionsLink.enterprise_id}
+                    onChange={e => setEnterpriseProfessionsLink(prev => ({ ...prev, enterprise_id: e.target.value }))}
+                    className="select"
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">— Выберите —</option>
+                    {enterprises.map(e => (
+                      <option key={e.id} value={e.id}>{e.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: 'var(--muted)' }}>Профессия</label>
+                  <select
+                    value={enterpriseProfessionsLink.profession_id}
+                    onChange={e => setEnterpriseProfessionsLink(prev => ({ ...prev, profession_id: e.target.value }))}
+                    className="select"
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">— Выберите —</option>
+                    {professions.map(p => (
+                      <option key={p.id} value={p.id}>{p.title}</option>
+                    ))}
+                  </select>
+                </div>
+                <button className="btn primary" onClick={handleLinkEnterpriseProfession}>
+                  <Link2 size={16} style={{ marginRight: 6 }} />
+                  Привязать
+                </button>
+              </div>
+
               {enterprises.length === 0 ? (
                 <div className="empty-state"><p>Нет предприятий</p></div>
               ) : (
                 <div style={{ display: 'grid', gap: 8 }}>
-                  {enterprises.map((ent) => (
-                    <div
-                      key={ent.id}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '12px 16px',
-                        background: 'var(--surface2)',
-                        borderRadius: 12,
-                        gap: 12
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <strong>{ent.name}</strong>
-                        <span style={{ marginLeft: 8, color: 'var(--muted)', fontSize: 13 }}>{ent.industry}</span>
-                        <span style={{ marginLeft: 8, color: 'var(--muted)', fontSize: 13 }}>{ent.city}</span>
-                        {ent.user_id && (
-                          <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--primary)' }}>
-                            ID пользователя: {ent.user_id}
-                          </p>
-                        )}
+                  {enterprises.map((ent) => {
+                    const entProfs = enterpriseProfessionsMap[ent.id] || [];
+                    return (
+                      <div
+                        key={ent.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '12px 16px',
+                          background: 'var(--surface2)',
+                          borderRadius: 12,
+                          gap: 12
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <strong>{ent.name}</strong>
+                          <span style={{ marginLeft: 8, color: 'var(--muted)', fontSize: 13 }}>{ent.industry}</span>
+                          <span style={{ marginLeft: 8, color: 'var(--muted)', fontSize: 13 }}>{ent.city}</span>
+                          {ent.user_id && (
+                            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--primary)' }}>
+                              ID пользователя: {ent.user_id}
+                            </p>
+                          )}
+                          {/* Привязанные профессии */}
+                          {entProfs.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+                              {entProfs.map(p => (
+                                <span
+                                  key={p.id}
+                                  className="chip"
+                                  style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+                                  onClick={() => handleUnlinkEnterpriseProfession(ent.id, p.id, p.title)}
+                                  title={`Отвязать "${p.title}"`}
+                                >
+                                  {p.title}
+                                  <Unlink size={10} />
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                          <button className="btn secondary small" onClick={() => openEntModal(ent)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Edit3 size={14} />
+                            Изменить
+                          </button>
+                          <button className="btn secondary small" onClick={() => handleEntDelete(ent.id)} style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#C0392B' }}>
+                            <Trash2 size={14} />
+                            Удалить
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                        <button className="btn secondary small" onClick={() => openEntModal(ent)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Edit3 size={14} />
-                          Изменить
-                        </button>
-                        <button className="btn secondary small" onClick={() => handleEntDelete(ent.id)} style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#C0392B' }}>
-                          <Trash2 size={14} />
-                          Удалить
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -674,39 +852,60 @@ export function AdminPage() {
                 <div className="empty-state"><p>Нет учебных заведений</p></div>
               ) : (
                 <div style={{ display: 'grid', gap: 8 }}>
-                  {institutions.map(inst => (
-                    <div
-                      key={inst.id}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '12px 16px',
-                        background: 'var(--surface2)',
-                        borderRadius: 12,
-                        gap: 12
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <strong>{inst.name}</strong>
-                        <span style={{ marginLeft: 8, color: 'var(--muted)', fontSize: 13 }}>{inst.type}</span>
-                        {inst.website && (
-                          <span style={{ marginLeft: 8, color: 'var(--primary)', fontSize: 13 }}>{inst.website}</span>
-                        )}
-                        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted)' }}>
-                          Привязано к {inst.profession_count || 0} профессиям
-                        </p>
-                      </div>
-                      <button
-                        className="btn secondary small"
-                        onClick={() => handleDeleteInstitution(inst.id)}
-                        style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#C0392B' }}
+                  {institutions.map(inst => {
+                    const instProfs = institutionProfessionsMap[inst.id] || [];
+                    return (
+                      <div
+                        key={inst.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '12px 16px',
+                          background: 'var(--surface2)',
+                          borderRadius: 12,
+                          gap: 12
+                        }}
                       >
-                        <Trash2 size={14} />
-                        Удалить
-                      </button>
-                    </div>
-                  ))}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <strong>{inst.name}</strong>
+                          <span style={{ marginLeft: 8, color: 'var(--muted)', fontSize: 13 }}>{inst.type}</span>
+                          {inst.website && (
+                            <span style={{ marginLeft: 8, color: 'var(--primary)', fontSize: 13 }}>{inst.website}</span>
+                          )}
+                          {/* Привязанные профессии */}
+                          {instProfs.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+                              {instProfs.map(p => (
+                                <span
+                                  key={p.id}
+                                  className="chip"
+                                  style={{ fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+                                  onClick={() => handleUnlinkInstProfession(inst.id, p.id, p.title)}
+                                  title={`Отвязать "${p.title}"`}
+                                >
+                                  {p.title}
+                                  <Unlink size={10} />
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+                              Не привязано к профессиям
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          className="btn secondary small"
+                          onClick={() => handleDeleteInstitution(inst.id)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#C0392B' }}
+                        >
+                          <Trash2 size={14} />
+                          Удалить
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
