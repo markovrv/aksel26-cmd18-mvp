@@ -90,18 +90,11 @@ export function AdminPage() {
 
   const loadEnterpriseProfessionsMap = async () => {
     try {
-      const map = {};
-      for (const ent of enterprises) {
-        try {
-          const data = await api.get(`/enterprises/${ent.id}`);
-          map[ent.id] = data.professions || [];
-        } catch (err) {
-          map[ent.id] = [];
-        }
-      }
-      setEnterpriseProfessionsMap(map);
+      const data = await api.get('/admin/enterprises-professions-map');
+      setEnterpriseProfessionsMap(data.data || {});
     } catch (err) {
-      console.error('Failed to load enterprise professions:', err);
+      console.error('Failed to load enterprise professions map:', err);
+      setEnterpriseProfessionsMap({});
     }
   };
 
@@ -125,33 +118,11 @@ export function AdminPage() {
 
   const loadInstitutionProfessionsMap = async () => {
     try {
-      const map = {};
-      for (const inst of institutions) {
-        try {
-          // Используем GET /api/admin/professions/:id/institutions - фактически нам нужно обратное
-          // Проще через GET /api/professions/:id/educational-institutions для каждой профессии найти заведения,
-          // но нам нужно наоборот - для каждого заведения найти профессии.
-          // Используем админский эндпоинт который уже возвращает profession_count
-          // Для детального списка профессий используем отдельный запрос
-          // к профессиям, привязанным к заведению - через профессии
-          const profsData = await api.get(`/professions?limit=500`);
-          const linked = [];
-          for (const prof of profsData.data) {
-            try {
-              const instData = await api.get(`/professions/${prof.id}/educational-institutions`);
-              if (instData.data.some(i => i.id === inst.id)) {
-                linked.push(prof);
-              }
-            } catch (e) { /* skip */ }
-          }
-          map[inst.id] = linked;
-        } catch (err) {
-          map[inst.id] = [];
-        }
-      }
-      setInstitutionProfessionsMap(map);
+      const data = await api.get('/admin/institutions-professions-map');
+      setInstitutionProfessionsMap(data.data || {});
     } catch (err) {
-      console.error('Failed to load institution professions:', err);
+      console.error('Failed to load institution professions map:', err);
+      setInstitutionProfessionsMap({});
     }
   };
 
@@ -258,24 +229,12 @@ export function AdminPage() {
 
   const loadInstitutionsData = async () => {
     try {
-      const data = await api.get('/admin/educational-institutions');
-      setInstitutions(data.data);
-      // After institutions are loaded, build profession map
-      const map = {};
-      const profsData = await api.get(`/professions?limit=500`);
-      for (const inst of data.data) {
-        const linked = [];
-        for (const prof of profsData.data) {
-          try {
-            const instData = await api.get(`/professions/${prof.id}/educational-institutions`);
-            if (instData.data.some(i => i.id === inst.id)) {
-              linked.push(prof);
-            }
-          } catch (e) { /* skip */ }
-        }
-        map[inst.id] = linked;
-      }
-      setInstitutionProfessionsMap(map);
+      const [instData, mapData] = await Promise.all([
+        api.get('/admin/educational-institutions'),
+        api.get('/admin/institutions-professions-map')
+      ]);
+      setInstitutions(instData.data);
+      setInstitutionProfessionsMap(mapData.data || {});
     } catch (err) {
       console.error('Failed to load institutions:', err);
     }

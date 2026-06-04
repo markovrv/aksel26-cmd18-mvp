@@ -72,6 +72,14 @@ router.delete('/professions/:id/institutions/:instId', authenticate, requireRole
 // Get all applications
 router.get('/applications', authenticate, requireRole('admin'), adminController.getAllApplications);
 
+// === Массовая загрузка связей (для оптимизации админки) ===
+
+// Массовая загрузка профессий для всех предприятий
+router.get('/enterprises-professions-map', authenticate, requireRole('admin'), adminController.getEnterprisesProfessionsMap);
+
+// Массовая загрузка профессий для всех учебных заведений
+router.get('/institutions-professions-map', authenticate, requireRole('admin'), adminController.getInstitutionsProfessionsMap);
+
 // === VK Credentials ===
 
 // Get VK credentials

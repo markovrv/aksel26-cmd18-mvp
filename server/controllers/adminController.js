@@ -247,6 +247,64 @@ export async function getAllApplications(req, res) {
   }
 }
 
+// === Массовая загрузка связей предприятий с профессиями ===
+export async function getEnterprisesProfessionsMap(req, res) {
+  try {
+    const rows = await db.allAsync(
+      `SELECT ep.enterprise_id, p.id, p.title, p.description, p.industry, p.video_url, p.image_url
+       FROM enterprise_professions ep
+       INNER JOIN professions p ON p.id = ep.profession_id
+       ORDER BY p.title`
+    );
+
+    const map = {};
+    for (const row of rows) {
+      if (!map[row.enterprise_id]) map[row.enterprise_id] = [];
+      map[row.enterprise_id].push({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        industry: row.industry,
+        video_url: row.video_url,
+        image_url: row.image_url
+      });
+    }
+
+    res.json({ data: map });
+  } catch (err) {
+    console.error('GetEnterprisesProfessionsMap error:', err);
+    res.status(500).json({ message: 'Ошибка при получении связей предприятий с профессиями' });
+  }
+}
+
+// === Массовая загрузка связей учебных заведений с профессиями ===
+export async function getInstitutionsProfessionsMap(req, res) {
+  try {
+    const rows = await db.allAsync(
+      `SELECT pei.institution_id, p.id, p.title, p.description, p.industry
+       FROM profession_educational_institutions pei
+       INNER JOIN professions p ON p.id = pei.profession_id
+       ORDER BY p.title`
+    );
+
+    const map = {};
+    for (const row of rows) {
+      if (!map[row.institution_id]) map[row.institution_id] = [];
+      map[row.institution_id].push({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        industry: row.industry
+      });
+    }
+
+    res.json({ data: map });
+  } catch (err) {
+    console.error('GetInstitutionsProfessionsMap error:', err);
+    res.status(500).json({ message: 'Ошибка при получении связей заведений с профессиями' });
+  }
+}
+
 // === VK Credentials ===
 export async function getVkCreds(req, res) {
   try {
