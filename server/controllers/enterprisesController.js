@@ -232,12 +232,22 @@ export async function unlinkProfession(req, res) {
   try {
     const { id, professionId } = req.params;
 
+    // Удаляем вакансии и отклики для этой профессии на предприятии
+    await db.runAsync(
+      'DELETE FROM vacancy_applications WHERE enterprise_id = ? AND profession_id = ?',
+      [id, professionId]
+    );
+    await db.runAsync(
+      'DELETE FROM vacancies WHERE enterprise_id = ? AND profession_id = ?',
+      [id, professionId]
+    );
+
     await db.runAsync(
       'DELETE FROM enterprise_professions WHERE enterprise_id = ? AND profession_id = ?',
       [id, professionId]
     );
 
-    res.json({ message: 'Профессия отвязана от предприятия' });
+    res.json({ message: 'Профессия отвязана от предприятия, вакансии удалены' });
   } catch (err) {
     console.error('UnlinkProfession error:', err);
     res.status(500).json({ message: 'Ошибка при отвязке профессии' });

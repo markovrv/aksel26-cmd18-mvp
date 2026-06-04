@@ -51,6 +51,10 @@ export function AdminPage() {
   const [linkProfessionId, setLinkProfessionId] = useState('');
   const [linkInstitutionId, setLinkInstitutionId] = useState('');
 
+  // Vacancy modal state
+  const [showVacancyModal, setShowVacancyModal] = useState(false);
+  const [vacancyData, setVacancyData] = useState({ enterpriseId: '', enterpriseName: '', professionId: '', professionTitle: '', availableSlots: '' });
+
   // Applications state
   const [allApplications, setAllApplications] = useState([]);
   const [appFilterEnterprise, setAppFilterEnterprise] = useState('');
@@ -294,6 +298,58 @@ export function AdminPage() {
       loadInstitutions();
     } catch (err) {
       error(err.message || 'Ошибка при удалении');
+    }
+  };
+
+  const handleVacancyClick = async () => {
+    const { enterprise_id, profession_id } = enterpriseProfessionsLink;
+    if (!enterprise_id || !profession_id) {
+      error('Выберите предприятие и профессию');
+      return;
+    }
+    const ent = enterprises.find(e => String(e.id) === enterprise_id);
+    const prof = professions.find(p => String(p.id) === profession_id);
+
+    // Если профессия ещё не привязана к предприятию — привязываем автоматически
+    const linkedProfs = enterpriseProfessionsMap[enterprise_id] || [];
+    const alreadyLinked = linkedProfs.some(p => String(p.id) === profession_id);
+    if (!alreadyLinked) {
+      try {
+        await api.post(`/enterprises/${enterprise_id}/professions`, {
+          profession_id: parseInt(profession_id)
+        });
+        await loadEnterpriseProfessionsMap();
+      } catch (err) {
+        error(err.message || 'Ошибка при привязке профессии');
+        return;
+      }
+    }
+
+    setVacancyData({
+      enterpriseId: enterprise_id,
+      enterpriseName: ent?.name || '',
+      professionId: profession_id,
+      professionTitle: prof?.title || '',
+      availableSlots: ''
+    });
+    setShowVacancyModal(true);
+  };
+
+  const handleVacancySave = async () => {
+    const slots = parseInt(vacancyData.availableSlots, 10);
+    if (isNaN(slots) || slots < 0 || slots > 100) {
+      error('Количество мест должно быть от 0 до 100');
+      return;
+    }
+    try {
+      await api.put(`/enterprises/${vacancyData.enterpriseId}/vacancies`, {
+        profession_id: parseInt(vacancyData.professionId),
+        available_slots: slots
+      });
+      success(slots === 0 ? 'Вакансия удалена (мест нет)' : 'Вакансия сохранена');
+      setShowVacancyModal(false);
+    } catch (err) {
+      error(err.message || 'Ошибка при сохранении вакансии');
     }
   };
 
@@ -693,10 +749,16 @@ export function AdminPage() {
                     ))}
                   </select>
                 </div>
-                <button className="btn primary" onClick={handleLinkEnterpriseProfession}>
-                  <Link2 size={16} style={{ marginRight: 6 }} />
-                  Привязать
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn primary" onClick={handleLinkEnterpriseProfession}>
+                    <Link2 size={16} style={{ marginRight: 6 }} />
+                    Привязать
+                  </button>
+                  <button className="btn secondary" onClick={handleVacancyClick} title="Указать вакансии">
+                    <Briefcase size={16} style={{ marginRight: 6 }} />
+                    Вакансии
+                  </button>
+                </div>
               </div>
 
               {enterprises.length === 0 ? (
@@ -1209,6 +1271,61 @@ export function AdminPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Vacancy */}
+      {showVacancyModal && (
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000
+          }}
+          onClick={() => setShowVacancyModal(false)}
+        >
+          <div
+            style={{
+              background: '#fff', borderRadius: 24, padding: 32,
+              maxWidth: 400, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ margin: 0, color: '#333' }}>Вакансия</h3>
+              <button onClick={() => setShowVacancyModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: 15, color: '#555', marginBottom: 20 }}>
+              Укажите количество вакантных мест на предприятии <strong>{vacancyData.enterpriseName}</strong> в профессии <strong>{vacancyData.professionTitle}</strong>
+            </p>
+
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#555' }}>Количество мест (0 — мест нет)</label>
+              <input
+                type="number"
+                className="input"
+                value={vacancyData.availableSlots}
+                onChange={e => setVacancyData(prev => ({ ...prev, availableSlots: e.target.value }))}
+                min={0}
+                max={100}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 12, border: '1px solid #ddd', fontSize: 14 }}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button type="button" className="btn secondary" onClick={() => setShowVacancyModal(false)}>
+                Отмена
+              </button>
+              <button type="button" className="btn primary" onClick={handleVacancySave}>
+                Сохранить
+              </button>
+            </div>
           </div>
         </div>
       )}

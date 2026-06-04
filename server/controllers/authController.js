@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import db from '../db/index.js';
 import { getJwtSecret } from '../utils/config.js';
+import { sendVkNotification } from '../utils/vkNotify.js';
 
 const saltRounds = 12;
 
@@ -38,11 +39,15 @@ export async function register(req, res) {
       sameSite: 'lax'
     });
 
-    sendVkNotification('new_user', {
-      userName: name,
-      email: email,
-      createdAt: new Date().toISOString()
-    });
+    try {
+      await sendVkNotification('new_user', {
+        userName: name,
+        email: email,
+        createdAt: new Date().toISOString()
+      });
+    } catch {
+      // VK уведомление опционально — ошибки не блокируют регистрацию
+    }
 
     res.status(201).json({
       message: 'Регистрация успешна',

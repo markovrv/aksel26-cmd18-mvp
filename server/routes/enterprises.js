@@ -108,4 +108,18 @@ router.post(
   vacanciesController.createVacancy
 );
 
+// Upsert vacancy (admin only — создаёт/обновляет/удаляет вакансию, поддерживает 0)
+router.put(
+  '/:id/vacancies',
+  authenticate,
+  requireRole('admin'),
+  requireNotBlocked,
+  [
+    body('profession_id').isInt().withMessage('ID профессии обязателен'),
+    body('available_slots').isInt({ min: 0, max: 100 }).withMessage('Количество мест должно быть от 0 до 100')
+  ],
+  handleValidationErrors,
+  vacanciesController.upsertVacancy
+);
+
 export default router;

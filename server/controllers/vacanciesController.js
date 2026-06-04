@@ -48,6 +48,60 @@ export async function createVacancy(req, res) {
   }
 }
 
+// === Upsert Vacancy (создать или обновить количество мест) ===
+export async function upsertVacancy(req, res) {
+  try {
+    const { id } = req.params;
+    const { profession_id, available_slots } = req.body;
+
+    if (!profession_id) {
+      return res.status(400).json({ message: 'ID профессии обязателен' });
+    }
+
+    if (available_slots == null || available_slots < 0 || available_slots > 100) {
+      return res.status(400).json({ message: 'Количество мест должно быть от 0 до 100' });
+    }
+
+    // Проверяем, существует ли уже вакансия для этой пары
+    const existing = await db.getAsync(
+      'SELECT id FROM vacancies WHERE enterprise_id = ? AND profession_id = ?',
+      [id, profession_id]
+    );
+
+    if (available_slots === 0) {
+      // Если 0 — удаляем вакансию (мест нет)
+      if (existing) {
+        await db.runAsync('DELETE FROM vacancies WHERE id = ?', [existing.id]);
+        // Удаляем все отклики на эту вакансию
+        await db.runAsync(
+          'DELETE FROM vacancy_applications WHERE enterprise_id = ? AND profession_id = ?',
+          [id, profession_id]
+        );
+      }
+      return res.json({ message: 'Вакансия удалена (мест нет)' });
+    }
+
+    if (existing) {
+      // Обновляем существующую
+      await db.runAsync(
+        'UPDATE vacancies SET available_slots = ? WHERE id = ?',
+        [available_slots, existing.id]
+      );
+    } else {
+      // Создаём новую
+      await db.runAsync(
+        'INSERT INTO vacancies (enterprise_id, profession_id, available_slots) VALUES (?, ?, ?)',
+        [id, profession_id, available_slots]
+      );
+    }
+
+    res.json({ message: 'Вакансия сохранена' });
+  } catch (err) {
+    console.error('UpsertVacancy error:', err);
+    res.status(500).json({ message: 'Ошибка при сохранении вакансии' });
+  }
+}
+
 // === Delete Vacancy ===
 export async function deleteVacancy(req, res) {
   try {
